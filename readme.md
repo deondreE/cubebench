@@ -15,6 +15,12 @@ Material Changes
 
 Texturing / UV Unwrap
 
+Exporting
+ - Minecraft
+ - Hytale
+ - Unity
+ - Unreal
+
 Animation
 - Timeline simple bone system.
 
