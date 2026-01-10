@@ -1,5 +1,23 @@
-Understanding this task is very simple, make blockbench take less memory and make it fast.
+Little blockbench clone because blockbench is slow :P
 
-I won't be able to use any existing tools, but I can just use OpenGL for windows and Linux
 
-And Metal on MacOS.
+## TODO
+
+UI -- Figure this out at some point not required.
+
+TOOLS:
+- Undo
+- Copy / Paste
+- Extrude
+- Cut
+
+Material Changes
+
+Texturing / UV Unwrap
+
+Animation
+- Timeline simple bone system.
+
+Block Particles ??????
+
+Scripting
