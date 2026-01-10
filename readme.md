@@ -2,13 +2,26 @@ Little blockbench clone because blockbench is slow :P
 
 ## TODO
 
-UI -- Figure this out at some point not required.
+User Interface:
+Resize panels
+panels should be clip rects
+panels should be ignoreable
+
+- [ ] Animation Timeline
+- [ ] Color Picker
 
 TOOLS:
+
+- Top / Bottom / Left / Right Snap Face
+- Pivot snap points
 
 - Copy / Paste
   - Faces {QUAD}
 - Extrude
+
+Add Support for Other shapes:
+
+- [ ] Quad
 
 Material Changes
 
