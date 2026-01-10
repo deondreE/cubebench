@@ -232,6 +232,7 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 		case glfw.KEY_S:
 			if mods == glfw.MOD_CONTROL {
 				// TODO: Save
+				save_scene_to_file(&scene, "./test_project.json")
 			} else {
 				tool_mode = .SCALE
 			}
