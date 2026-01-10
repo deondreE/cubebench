@@ -229,6 +229,10 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 		switch key {
 		case glfw.KEY_G:
 			tool_mode = .TRANSLATE
+		case glfw.KEY_O:
+			if mods == glfw.MOD_CONTROL {
+				load_scene_from_file(&scene, "./test_project.json")
+			}
 		case glfw.KEY_S:
 			if mods == glfw.MOD_CONTROL {
 				// TODO: Save
