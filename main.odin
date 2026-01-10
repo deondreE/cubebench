@@ -4,7 +4,6 @@ import "base:runtime"
 import "core:fmt"
 import "core:math"
 import "core:math/linalg/glsl"
-import "core:os"
 import gl "vendor:OpenGL"
 import "vendor:glfw"
 
@@ -365,7 +364,7 @@ main :: proc() {
 	grid_vertices := generate_grid(10, 1)
 	stem_vertices := [?]f32{0, 0, 0, 0, 0, 1.0}
 	tip_vertices := generate_gizmo_tips()
-	circle_vertices := generate_circle(64, 1.0)
+	// circle_vertices := generate_circle(64, 1.0)
 
 	shaderProgram, _ := gl.load_shaders_file("./shaders/shader.vs", "./shaders/shader.fs")
 	gridShader, _ := gl.load_shaders_file("./shaders/grid.vs", "./shaders/grid.fs")
@@ -675,7 +674,7 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 		ui_label(ctx, fmt.tprintf("Objects: %d", len(scene.objects)))
 		ui_separator(ctx)
 
-		for obj, i in scene.objects {
+		for _, i in scene.objects {
 			is_selected := false
 			for sel_idx in scene.selected_objects {
 				if sel_idx == i {

@@ -1,1 +1,1 @@
-odin run . 
+odin run . -linker:radlink

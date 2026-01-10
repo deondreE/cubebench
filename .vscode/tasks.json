@@ -6,8 +6,8 @@
     {
       "label": "Build",
       "type": "shell",
-      "command": "odin build . -debug",
+      "command": "odin build . -debug -linker:radlink ",
       "group": "build"
-    },
+    }
   ]
 }

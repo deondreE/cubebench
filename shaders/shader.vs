@@ -14,7 +14,7 @@ void main() {
     FragPos = vec3(model * vec4(aPos, 1.0));
     Normal = mat3(transpose(inverse(model))) * aNormal;
     gl_Position = projection * view * vec4(FragPos, 1.0);
-    
+
     // Use position-based coloring as fallback
     ourColor = aPos * 0.5 + 0.5;
 }
