@@ -165,7 +165,6 @@ draw_gizmo_axis :: proc(
 
 	switch mode {
 	case .TRANSLATE:
-		gl.LineWidth(5.0)
 		gl.UniformMatrix4fv(m_loc, 1, false, &model[0, 0])
 		gl.BindVertexArray(vao_stem)
 		gl.DrawArrays(gl.LINES, 0, 2)
@@ -173,10 +172,9 @@ draw_gizmo_axis :: proc(
 		tip_model := model * glsl.mat4Translate({0, 0, 1.0})
 		gl.UniformMatrix4fv(m_loc, 1, false, &tip_model[0, 0])
 		gl.BindVertexArray(vao_tip)
-		gl.DrawArrays(gl.LINES, 0, 8)
+		gl.DrawArrays(gl.TRIANGLES, 0, 96)
 
 	case .SCALE:
-		gl.LineWidth(5.0)
 		gl.UniformMatrix4fv(m_loc, 1, false, &model[0, 0])
 		gl.BindVertexArray(vao_stem)
 		gl.DrawArrays(gl.LINES, 0, 2)
@@ -184,7 +182,7 @@ draw_gizmo_axis :: proc(
 		tip_model := model * glsl.mat4Translate({0, 0, 1.0})
 		gl.UniformMatrix4fv(m_loc, 1, false, &tip_model[0, 0])
 		gl.BindVertexArray(vao_tip)
-		gl.DrawArrays(gl.LINES, 8, 12)
+		gl.DrawArrays(gl.TRIANGLES, 256, 256)
 
 	case .ROTATE:
 		gl.LineWidth(3.0)
@@ -277,138 +275,73 @@ generate_grid :: proc(size, step: i32) -> []f32 {
 	return grid[:]
 }
 
+generate_cone :: proc(segments: i32 = 16, radius: f32 = 0.1, height: f32 = 0.4) -> []f32 {
+	vertices := make([dynamic]f32)
+
+	tip := glsl.vec3({0, 0, height})
+
+	for i in 0..< segments {
+		angle1 := f32(i) * 2.0 * math.PI / f32(segments)
+		angle2 := f32(i + 1) * 2.0 * math.PI / f32(segments)
+
+		p1 := glsl.vec3{radius * math.cos(angle1), radius * math.sin(angle1), 0}
+		p2 := glsl.vec3{radius * math.cos(angle2), radius * math.sin(angle2), 0}
+
+		edge1 := p2 - p1
+		edge2 := tip - p1
+		normal := glsl.normalize(glsl.cross(edge1, edge2))
+
+		append(&vertices, tip.x, tip.y, tip.z, normal.x, normal.y, normal.z)
+		append(&vertices, p1.x, p1.y, p1.z, normal.x, normal.y, normal.z)
+		append(&vertices, p2.x, p2.y, p2.z, normal.x, normal.y, normal.z)
+
+		base_normal := glsl.vec3{0, 0, -1}
+		append(&vertices, 0, 0, 0, base_normal.x, base_normal.y, base_normal.z)
+		append(&vertices, p2.x, p2.y, p2.z, base_normal.x, base_normal.y, base_normal.z)
+		append(&vertices, p1.x, p1.y, p1.z, base_normal.x, base_normal.y, base_normal.z)
+	}
+
+	return vertices[:]
+}
+
+generate_cube_tip :: proc(s: f32) -> []f32 {
+	v := make([dynamic]f32)
+
+	add_v :: proc(v: ^[dynamic]f32, x, y, z, nx, ny, nz: f32) {
+		append(v, x, y, z, nx, ny, nz)
+	}
+
+	add_v(&v, -s, -s,  s, 0, 0, 1); add_v(&v,  s, -s,  s, 0, 0, 1); add_v(&v,  s,  s,  s, 0, 0, 1)
+	add_v(&v,  s,  s,  s, 0, 0, 1); add_v(&v, -s,  s,  s, 0, 0, 1); add_v(&v, -s, -s,  s, 0, 0, 1)
+
+	add_v(&v,  s, -s, -s, 0, 0,-1); add_v(&v, -s, -s, -s, 0, 0,-1); add_v(&v, -s,  s, -s, 0, 0,-1)
+	add_v(&v, -s,  s, -s, 0, 0,-1); add_v(&v,  s,  s, -s, 0, 0,-1); add_v(&v,  s, -s, -s, 0, 0,-1)
+
+	add_v(&v, -s, -s, -s, -1, 0, 0); add_v(&v, -s, -s,  s, -1, 0, 0); add_v(&v, -s,  s,  s, -1, 0, 0)
+	add_v(&v, -s,  s,  s, -1, 0, 0); add_v(&v, -s,  s, -s, -1, 0, 0); add_v(&v, -s, -s, -s, -1, 0, 0)
+
+	add_v(&v,  s, -s,  s, 1, 0, 0); add_v(&v,  s, -s, -s, 1, 0, 0); add_v(&v,  s,  s, -s, 1, 0, 0)
+	add_v(&v,  s,  s, -s, 1, 0, 0); add_v(&v,  s,  s,  s, 1, 0, 0); add_v(&v,  s, -s,  s, 1, 0, 0)
+
+	add_v(&v, -s,  s,  s, 0, 1, 0); add_v(&v,  s,  s,  s, 0, 1, 0); add_v(&v,  s,  s, -s, 0, 1, 0)
+	add_v(&v,  s,  s, -s, 0, 1, 0); add_v(&v, -s,  s, -s, 0, 1, 0); add_v(&v, -s,  s,  s, 0, 1, 0)
+
+	add_v(&v, -s, -s, -s, 0, -1, 0); add_v(&v,  s, -s, -s, 0, -1, 0); add_v(&v,  s, -s,  s, 0, -1, 0)
+	add_v(&v,  s, -s,  s, 0, -1, 0); add_v(&v, -s, -s,  s, 0, -1, 0); add_v(&v, -s, -s, -s, 0, -1, 0)
+
+	return v[:]
+}
+
 generate_gizmo_tips :: proc() -> []f32 {
 	tips := make([dynamic]f32)
 
 	// Arrow tip
-	arrow := [?]f32 {
-		0,
-		0,
-		0.3,
-		0.1,
-		0,
-		0,
-		0,
-		0,
-		0.3,
-		-0.1,
-		0,
-		0,
-		0,
-		0,
-		0.3,
-		0,
-		0.1,
-		0,
-		0,
-		0,
-		0.3,
-		0,
-		-0.1,
-		0,
-		0.1,
-		0,
-		0,
-		0,
-		0.1,
-		0,
-		0,
-		0.1,
-		0,
-		-0.1,
-		0,
-		0,
-		-0.1,
-		0,
-		0,
-		0,
-		-0.1,
-		0,
-		0,
-		-0.1,
-		0,
-		0.1,
-		0,
-		0,
-	}
-	for v in arrow do append(&tips, v)
+	cone := generate_cone(16, 0.05, 0.2)
+	for v in cone do append(&tips, v)
 
 	// Cube tip
 	s: f32 = 0.1
-	cube_edges := [?]f32 {
-		-s,
-		-s,
-		-s,
-		s,
-		-s,
-		-s,
-		s,
-		-s,
-		-s,
-		s,
-		s,
-		-s,
-		s,
-		s,
-		-s,
-		-s,
-		s,
-		-s,
-		-s,
-		s,
-		-s,
-		-s,
-		-s,
-		-s,
-		-s,
-		-s,
-		s,
-		s,
-		-s,
-		s,
-		s,
-		-s,
-		s,
-		s,
-		s,
-		s,
-		s,
-		s,
-		s,
-		-s,
-		s,
-		s,
-		-s,
-		s,
-		s,
-		-s,
-		-s,
-		s,
-		-s,
-		-s,
-		-s,
-		-s,
-		-s,
-		s,
-		s,
-		-s,
-		-s,
-		s,
-		-s,
-		s,
-		s,
-		s,
-		-s,
-		s,
-		s,
-		s,
-		-s,
-		s,
-		-s,
-		-s,
-		s,
-		s,
-	}
+	cube_edges := generate_cube_tip(s)
 	for v in cube_edges do append(&tips, v)
 
 	return tips[:]
@@ -454,8 +387,6 @@ main :: proc() {
 	gridShader, _ := gl.load_shaders_file("./shaders/grid.vs", "./shaders/grid.fs")
 	gizmoShader, _ := gl.load_shaders_file("./shaders/gizmos.vs", "./shaders/gizmos.fs")
 
-	// TODO: Add the ability to see a pixel grid on the object in paint mode.
-
 	// Grid VAO
 	gVAO, gVBO: u32
 	gl.GenVertexArrays(1, &gVAO); gl.GenBuffers(1, &gVBO)
@@ -474,11 +405,14 @@ main :: proc() {
 
 	// Gizmo tip VAO
 	tVAO, tVBO: u32
+	stride := i32(6 * size_of(f32))
 	gl.GenVertexArrays(1, &tVAO); gl.GenBuffers(1, &tVBO)
 	gl.BindVertexArray(tVAO); gl.BindBuffer(gl.ARRAY_BUFFER, tVBO)
 	gl.BufferData(gl.ARRAY_BUFFER, len(tip_vertices) * 4, raw_data(tip_vertices), gl.STATIC_DRAW)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * size_of(f32), 0)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, stride, 0)
 	gl.EnableVertexAttribArray(0)
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, stride, 3 * size_of(f32))
+	gl.EnableVertexAttribArray(1)
 
 	gl.Enable(gl.DEPTH_TEST)
 	gl.Enable(gl.CULL_FACE)

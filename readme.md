@@ -8,8 +8,8 @@ TOOLS:
 
 - Undo
 - Copy / Paste
+  - Faces {QUAD}
 - Extrude
-- Cut
 
 Material Changes
 
@@ -17,7 +17,7 @@ Texturing / UV Unwrap
 
 - All textures are going to be a pixel art system.
 
-Exporting
+Exporting:
 
 - Minecraft
 - Hytale
