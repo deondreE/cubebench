@@ -795,6 +795,7 @@ ui_spacing :: proc(ctx: ^UI_Context, amount: f32 = 0) {
 
 ui_render_begin :: proc(ctx: ^UI_Context, screen_width, screen_height: i32) {
 	gl.Disable(gl.DEPTH_TEST)
+	gl.Disable(gl.CULL_FACE)
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
@@ -920,6 +921,7 @@ ui_render_end :: proc(ctx: ^UI_Context) {
 
 	gl.Disable(gl.BLEND)
 	gl.Enable(gl.DEPTH_TEST)
+	gl.Enable(gl.CULL_FACE)
 }
 
 // === Cleanup ===

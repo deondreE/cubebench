@@ -6,7 +6,6 @@ UI -- Figure this out at some point not required.
 
 TOOLS:
 
-- Undo
 - Copy / Paste
   - Faces {QUAD}
 - Extrude

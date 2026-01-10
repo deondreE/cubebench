@@ -612,11 +612,11 @@ main :: proc() {
 
 		// Clear depth buffer before UI so UI is always on top
 		gl.Clear(gl.DEPTH_BUFFER_BIT)
-		// ui_render_begin(&ui, SCR_WIDTH, SCR_HEIGHT)
-		// render_ui(&ui, &scene, &tool_mode, &edit_mode)
-		// ui_render_end(&ui)
+		ui_render_begin(&ui, SCR_WIDTH, SCR_HEIGHT)
+		render_ui(&ui, &scene, &tool_mode, &edit_mode)
+		ui_render_end(&ui)
 
-		// ui_end_frame(&ui)
+		ui_end_frame(&ui)
 
 		glfw.SwapBuffers(window)
 		glfw.PollEvents()
