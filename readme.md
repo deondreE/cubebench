@@ -9,6 +9,7 @@ panels should be ignoreable
 
 - [ ] Animation Timeline
 - [ ] Color Picker
+- [ ] Scrollable panels
 
 TOOLS:
 

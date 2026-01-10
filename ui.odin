@@ -28,6 +28,15 @@ UI_Style :: struct {
 	rounding:     f32,
 }
 
+UI_Panel_State :: struct {
+	scroll_offset: f32,
+	content_height: f32,
+	max_scroll: f32,
+	is_scrolling: bool,
+	scroll_bar_hot: bool,
+	scroll_bar_active: bool,
+}
+
 Font_Atlas :: struct {
 	width, height: i32,
 	texture:       u32,
@@ -77,6 +86,9 @@ UI_Context :: struct {
 	prev_mouse_down:      bool,
 	hot_id:               u64,
 	active_id:            u64,
+	clip_rect:            UI_Rect,
+	panel_state: UI_Panel_State,
+	screen_height: i32,
 	current_panel:        UI_Rect,
 	cursor_x, cursor_y:   f32,
 	row_height:           f32,
@@ -250,6 +262,7 @@ ui_init :: proc(ctx: ^UI_Context, screen_width, screen_height: i32) {
 	ctx.style = default_style()
 	ctx.row_height = 24.0
 	ctx.font_size = 16.0
+	ctx.screen_height = screen_height
 
 	if !load_font(&ctx.font, ctx.font_size) {
 		fmt.println("WARNING: Running without font support")
@@ -416,7 +429,7 @@ compile_ui_shader :: proc(vertex_src, fragment_src: string) -> u32 {
 
 // === Input Handling ===
 
-ui_begin_frame :: proc(ctx: ^UI_Context, window: glfw.WindowHandle) {
+ui_begin_frame :: proc(ctx: ^UI_Context, window: glfw.WindowHandle, scroll_delta: f32 = 0) {
 	mx, my := glfw.GetCursorPos(window)
 	ctx.mouse_x = f32(mx)
 	ctx.mouse_y = f32(my)
@@ -432,6 +445,10 @@ ui_begin_frame :: proc(ctx: ^UI_Context, window: glfw.WindowHandle) {
 	}
 
 	ctx.hot_id = 0
+
+	if scroll_delta != 0 {
+		ctx.active_id = 0
+	}
 
 	// Clear batch data
 	clear(&ctx.batch.shape_vertices)
@@ -592,25 +609,153 @@ get_text_width :: proc(ctx: ^UI_Context, text: string) -> f32 {
 }
 
 // === Widget Functions ===
+ui_push_clip :: proc(ctx: ^UI_Context, rect: UI_Rect, screen_height: i32) {
+	ctx.clip_rect = rect
+	gl.Enable(gl.SCISSOR_TEST)
+
+	scissor_y := ctx.screen_height - i32(rect.y + rect.h)
+
+	gl.Scissor(
+		i32(rect.x),
+		scissor_y,
+		i32(rect.w),
+		i32(rect.h),
+	)
+}
+
+ui_pop_clip :: proc() {
+	gl.Disable(gl.SCISSOR_TEST)
+}
 
 ui_panel_begin :: proc(ctx: ^UI_Context, x, y, w, h: f32, title: string) {
 	ctx.current_panel = UI_Rect{x, y, w, h}
-	ctx.cursor_x = x + ctx.style.padding
-	ctx.cursor_y = y + ctx.style.padding
+
+	ctx.panel_state.content_height = 0
+	ctx.panel_state.max_scroll = 0
+
+//	ctx.cursor_x = x + ctx.style.padding
+//	ctx.cursor_y = y + ctx.style.padding
 
 	batch_rect(ctx, ctx.current_panel, ctx.style.bg_color)
 	batch_rect_outline(ctx, ctx.current_panel, ctx.style.border_color, 2.0)
 
+	title_height: f32 = 0
 	if len(title) > 0 {
-		title_rect := UI_Rect{x, y, w, 28}
+		title_height = 28
+		title_rect := UI_Rect{x, y, w, title_height}
 		batch_rect(ctx, title_rect, {0.15, 0.15, 0.2, 1.0})
 		batch_text(ctx, title, x + ctx.style.padding, y + 6, {0.9, 0.9, 0.95, 1.0})
 		ctx.cursor_y += 32
 	}
+
+	content_y := y + title_height
+	content_h := h - title_height
+
+	content_rect := UI_Rect{x, content_y, w, content_h}
+	ui_push_clip(ctx, content_rect, ctx.screen_height)
+
+	ctx.cursor_x = x + ctx.style.padding
+	ctx.cursor_y = content_y + ctx.style.padding - ctx.panel_state.scroll_offset
 }
 
 ui_panel_end :: proc(ctx: ^UI_Context) {
-	// Nothing needed
+	ui_pop_clip()
+
+	panel_top := ctx.current_panel.y + 28
+	panel_bottom :=  ctx.current_panel.y + ctx.current_panel.h
+	current_bottom := ctx.cursor_y + ctx.panel_state.scroll_offset
+
+	ctx.panel_state.content_height = current_bottom - panel_top
+
+	// Max scroll calc
+	visible_height := panel_bottom - panel_top - ctx.style.padding * 2
+	ctx.panel_state.max_scroll = max(0, ctx.panel_state.content_height - visible_height)
+
+	if ctx.panel_state.max_scroll > 0 {
+		draw_scrollbar(ctx)
+	}
+
+	handle_scroll_input(ctx)
+}
+
+draw_scrollbar :: proc(ctx: ^UI_Context) {
+	panel := ctx.current_panel
+	scrollbar_width: f32 = 6
+	scrollbar_padding: f32 = 2
+
+	track_x := panel.x + panel.w - scrollbar_width - scrollbar_padding
+	track_y := panel.y + 28 + scrollbar_padding
+	track_w := scrollbar_width
+	track_h := panel.h - 28 - scrollbar_padding * 2
+
+	track_rect := UI_Rect{track_x, track_y, track_w, track_h}
+
+	batch_rect(ctx, track_rect, {0.15, 0.15, 0.2, 0.8})
+
+	visible_height := track_h
+	content_h := ctx.panel_state.content_height
+
+	handle_height := max(20, (visible_height / content_h) * track_h)
+
+	scroll_ratio := ctx.panel_state.scroll_offset / ctx.panel_state.max_scroll
+	max_handle_y := track_h - handle_height
+	handle_y := track_y + scroll_ratio * max_handle_y
+
+	handle_rect := UI_Rect {track_x + 2, handle_y, track_w - 4, handle_height}
+
+	is_hot := point_in_rect(ctx.mouse_x, ctx.mouse_y, handle_rect)
+	ctx.panel_state.scroll_bar_hot = is_hot
+
+	handle_color := ctx.style.fg_color
+	if ctx.panel_state.scroll_bar_active {
+		handle_color = ctx.style.active_color
+	} else if is_hot {
+		handle_color = ctx.style.hover_color
+	}
+
+	batch_rect(ctx, handle_rect, handle_color)
+	batch_rect_outline(ctx, handle_rect, ctx.style.border_color, 1.0)
+}
+
+handle_scroll_input :: proc(ctx: ^UI_Context) {
+	if ctx.panel_state.max_scroll <= 0 do return
+
+	panel := ctx.current_panel
+
+	is_over_panel := point_in_rect(ctx.mouse_x, ctx.mouse_y, panel)
+
+	if ctx.panel_state.scroll_bar_hot && ctx.mouse_pressed {
+		ctx.panel_state.scroll_bar_active = true
+	}
+
+	if ctx.mouse_released {
+		ctx.panel_state.scroll_bar_active = false
+	}
+
+	if ctx.panel_state.scroll_bar_active && ctx.mouse_down {
+		// calculate scroll from mouse pos
+		track_y := panel.y + 28 + 2
+		track_h := panel.h - 28 - 4
+
+		visible_height := track_h
+		handle_height := max(20, (visible_height / ctx.panel_state.content_height) * track_h)
+		max_handle_y := track_h - handle_height
+
+		mouse_offset := ctx.mouse_y - track_y
+		scroll_ratio := clamp(mouse_offset / max_handle_y, 0, 1)
+
+		ctx.panel_state.scroll_offset = scroll_ratio * ctx.panel_state.max_scroll
+	}
+}
+
+ui_scroll_wheel :: proc(ctx: ^UI_Context, scroll_delta: f32) {
+	if ctx.panel_state.max_scroll <= 0 do return
+
+	if point_in_rect(ctx.mouse_x, ctx.mouse_y, ctx.current_panel) {
+		scroll_speed: f32 = 20.0
+		ctx.panel_state.scroll_offset -= scroll_delta * scroll_speed
+		ctx.panel_state.scroll_offset = clamp(ctx.panel_state.scroll_offset, 0, ctx.panel_state.max_scroll)
+	}
 }
 
 ui_button :: proc(ctx: ^UI_Context, text: string, width: f32 = 0) -> bool {

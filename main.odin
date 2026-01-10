@@ -631,7 +631,7 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 	ui_panel_begin(ctx, 0, 0, SCR_WIDTH, toolbar_height, "")
 	
 	// Tool buttons with icons (horizontal layout)
-	ctx.cursor_x = 10
+	ctx.cursor_x = 10	
 	ctx.cursor_y = 10
 	
 	button_size: f32 = 32
