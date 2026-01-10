@@ -1,27 +1,25 @@
 package main
 
 import "core:fmt"
-import "core:os"
 import "core:math/linalg/glsl"
+import "core:os"
 import gl "vendor:OpenGL"
 import stbi "vendor:stb/image"
 
 Texture_Atlas :: struct {
-	texture_id: u32,
+	texture_id:    u32,
 	width, height: i32,
-	pixel_data: []u8,
+	pixel_data:    []u8,
 }
-
-// UV is built into the geometry.
 
 create_texture_atlas :: proc(width, height: i32) -> Texture_Atlas {
 	atlas := Texture_Atlas {
-		width = width,
-		height = height,
+		width      = width,
+		height     = height,
 		pixel_data = make([]u8, width * height * 4), // RGBA
 	}
 
-	for i in 0..<(width*height*4) {
+	for i in 0 ..< (width * height * 4) {
 		atlas.pixel_data[i] = 255
 	}
 
@@ -45,7 +43,7 @@ create_texture_atlas :: proc(width, height: i32) -> Texture_Atlas {
 		0,
 		gl.RGBA,
 		gl.UNSIGNED_BYTE,
-		raw_data(atlas.pixel_data)
+		raw_data(atlas.pixel_data),
 	)
 
 	return atlas
@@ -56,12 +54,13 @@ update_texture_atlas :: proc(atlas: ^Texture_Atlas) {
 	gl.TexSubImage2D(
 		gl.TEXTURE_2D,
 		0,
-		0, 0,
+		0,
+		0,
 		atlas.width,
 		atlas.height,
 		gl.RGBA,
 		gl.UNSIGNED_BYTE,
-		raw_data(atlas.pixel_data)
+		raw_data(atlas.pixel_data),
 	)
 }
 
@@ -102,7 +101,7 @@ load_texture_from_file :: proc(atlas: ^Texture_Atlas, filepath: string) -> bool 
 		0,
 		gl.RGBA,
 		gl.UNSIGNED_BYTE,
-		raw_data(atlas.pixel_data)
+		raw_data(atlas.pixel_data),
 	)
 
 	fmt.printf("Loaded texture: %dx%d from %s\n", width, height, filepath)
@@ -126,9 +125,9 @@ paint_pixel :: proc(atlas: ^Texture_Atlas, x, y: i32, color: glsl.vec4) {
 }
 
 paint_brush :: proc(atlas: ^Texture_Atlas, center_x, center_y, radius: i32, color: glsl.vec4) {
-	for dy in -radius..=radius {
-		for dx in -radius..=radius {
-			if dx*dx + dy*dy <= radius*radius {
+	for dy in -radius ..= radius {
+		for dx in -radius ..= radius {
+			if dx * dx + dy * dy <= radius * radius {
 				paint_pixel(atlas, center_x + dx, center_y * dy, color)
 			}
 		}
@@ -136,7 +135,7 @@ paint_brush :: proc(atlas: ^Texture_Atlas, center_x, center_y, radius: i32, colo
 	update_texture_atlas(atlas)
 }
 
-get_face_uv_region :: proc (face_idx: Face_Index, texture_size: i32) -> (u0, v0, u1, v1: f32) {
+get_face_uv_region :: proc(face_idx: Face_Index, texture_size: i32) -> (u0, v0, u1, v1: f32) {
 	// Layout: 6 faces in a 3x2 grid
 	// [Front] [Right] [Back]
 	// [Left] [Top] [Bottom]
@@ -145,18 +144,18 @@ get_face_uv_region :: proc (face_idx: Face_Index, texture_size: i32) -> (u0, v0,
 	grid_h := f32(1.0 / 2.0)
 
 	switch face_idx {
-		case .FRONT:
-			return 0*grid_w, 0*grid_h, 1*grid_w, 1*grid_h
-		case .RIGHT:
-			return 1*grid_w, 0*grid_h, 2*grid_w, 1*grid_h
-		case .BACK:
-			return 2*grid_w, 0*grid_h, 3*grid_w, 1*grid_h
-		case .LEFT:
-			return 0*grid_w, 1*grid_h, 1*grid_w, 2*grid_h
-		case .TOP:
-			return 1*grid_w, 1*grid_h, 2*grid_w, 2*grid_h
-		case .BOTTOM:
-			return 2*grid_w, 1*grid_h, 3*grid_w, 2*grid_h
+	case .FRONT:
+		return 0 * grid_w, 0 * grid_h, 1 * grid_w, 1 * grid_h
+	case .RIGHT:
+		return 1 * grid_w, 0 * grid_h, 2 * grid_w, 1 * grid_h
+	case .BACK:
+		return 2 * grid_w, 0 * grid_h, 3 * grid_w, 1 * grid_h
+	case .LEFT:
+		return 0 * grid_w, 1 * grid_h, 1 * grid_w, 2 * grid_h
+	case .TOP:
+		return 1 * grid_w, 1 * grid_h, 2 * grid_w, 2 * grid_h
+	case .BOTTOM:
+		return 2 * grid_w, 1 * grid_h, 3 * grid_w, 2 * grid_h
 	}
 
 	return 0, 0, 1, 1

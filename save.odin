@@ -19,6 +19,7 @@ Scene_Save_Data :: struct {
 	objects: []Scene_Object_Data,
 	texture_width: i32,
 	texture_height: i32,
+	project_version: i32,
 }
 
 scene_object_to_data :: proc(obj: Scene_Object) -> Scene_Object_Data {
@@ -79,6 +80,7 @@ save_scene_to_file :: proc(scene: ^Scene, filename: string) -> bool {
 		objects = objects_data[:],
 		texture_width = scene.default_atlas.width,
 		texture_height  = scene.default_atlas.height,
+		project_version = 1.0,
 	}
 
 	// TODO: Maybe change to .ini or .yml

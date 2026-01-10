@@ -233,6 +233,13 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 			if mods == glfw.MOD_CONTROL {
 				load_scene_from_file(&scene, "./test_project.json")
 			}
+		case glfw.KEY_Z:
+			if mods == glfw.MOD_CONTROL {
+				undo_perform(&scene)
+			}
+			else if mods == glfw.MOD_SHIFT {
+				redo_perform(&scene)
+			}
 		case glfw.KEY_S:
 			if mods == glfw.MOD_CONTROL {
 				// TODO: Save
@@ -261,9 +268,11 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 		case glfw.KEY_TAB:
 			edit_mode = edit_mode == .OBJECT ? .FACE : .OBJECT
 		case glfw.KEY_DELETE:
+			record_delete_object(&scene, 0)
 			scene_delete_selected(&scene)
 		case glfw.KEY_D:
 			if mods == glfw.MOD_CONTROL {
+				record_add_object(&scene, 0)
 				scene_duplicate_selected(&scene)
 			}
 		}
@@ -379,6 +388,9 @@ main :: proc() {
 
 	scene_init(&scene)
 	defer scene_cleanup(&scene)
+
+	undo_init(100)
+	defer undo_cleanup()
 
 	// Add a default cube
 	scene_add_cube(&scene, {0, 0, 0}, {1, 1, 1}, {1, 1, 1, 1})
