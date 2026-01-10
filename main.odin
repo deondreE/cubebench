@@ -182,7 +182,7 @@ draw_gizmo_axis :: proc(
 		tip_model := model * glsl.mat4Translate({0, 0, 1.0})
 		gl.UniformMatrix4fv(m_loc, 1, false, &tip_model[0, 0])
 		gl.BindVertexArray(vao_tip)
-		gl.DrawArrays(gl.TRIANGLES, 256, 256)
+		gl.DrawArrays(gl.TRIANGLES, 96, 256)
 
 	case .ROTATE:
 		gl.LineWidth(3.0)
@@ -340,7 +340,7 @@ generate_gizmo_tips :: proc() -> []f32 {
 	for v in cone do append(&tips, v)
 
 	// Cube tip
-	s: f32 = 0.1
+	s: f32 = 0.05
 	cube_edges := generate_cube_tip(s)
 	for v in cube_edges do append(&tips, v)
 
