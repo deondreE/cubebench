@@ -1,21 +1,30 @@
 #version 330 core
-out vec4 FragColor;
 
 in vec3 FragPos;
 in vec3 Normal;
-in vec3 ourColor;
+in vec2 TexCoord;
+
+out vec4 FragColor;
 
 uniform vec4 objectColor;
+uniform bool useTexture;
+uniform sampler2D textureSampler;
 
-void main()
-{
-    vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
-    vec3 normal = normalize(Normal);
+void main() {
+    // Simple lighting
+    vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+    float diff = max(dot(normalize(Normal), lightDir), 0.0);
+    float ambient = 0.3;
+    float lighting = ambient + diff * 0.7;
     
-    float ambient = 0.4;
-    float diffuse = max(dot(normal, lightDir), 0.0) * 0.6;
-    float lighting = ambient + diffuse;
+    vec4 baseColor;
     
-    vec3 result = objectColor.rgb * lighting;
-    FragColor = vec4(result, objectColor.a);
+    if (useTexture) {
+        // Use texture with nearest neighbor filtering (pixel art)
+        baseColor = texture(textureSampler, TexCoord);
+    } else {
+        baseColor = objectColor;
+    }
+    
+    FragColor = vec4(baseColor.rgb * lighting, baseColor.a);
 }

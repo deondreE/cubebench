@@ -3,235 +3,8 @@ package main
 import "core:math/linalg/glsl"
 import gl "vendor:OpenGL"
 
-// Cube geometry data with normals and UVs
-cube :: [216]f32 {
-	// Front face (Z+)
-	-0.5,
-	-0.5,
-	0.5,
-	0.0,
-	0.0,
-	1.0,
-	0.5,
-	-0.5,
-	0.5,
-	0.0,
-	0.0,
-	1.0,
-	0.5,
-	0.5,
-	0.5,
-	0.0,
-	0.0,
-	1.0,
-	0.5,
-	0.5,
-	0.5,
-	0.0,
-	0.0,
-	1.0,
-	-0.5,
-	0.5,
-	0.5,
-	0.0,
-	0.0,
-	1.0,
-	-0.5,
-	-0.5,
-	0.5,
-	0.0,
-	0.0,
-	1.0,
-
-	// Back face (Z-)
-	0.5,
-	-0.5,
-	-0.5,
-	0.0,
-	0.0,
-	-1.0,
-	-0.5,
-	-0.5,
-	-0.5,
-	0.0,
-	0.0,
-	-1.0,
-	-0.5,
-	0.5,
-	-0.5,
-	0.0,
-	0.0,
-	-1.0,
-	-0.5,
-	0.5,
-	-0.5,
-	0.0,
-	0.0,
-	-1.0,
-	0.5,
-	0.5,
-	-0.5,
-	0.0,
-	0.0,
-	-1.0,
-	0.5,
-	-0.5,
-	-0.5,
-	0.0,
-	0.0,
-	-1.0,
-
-	// Left face (X-)
-	-0.5,
-	-0.5,
-	-0.5,
-	-1.0,
-	0.0,
-	0.0,
-	-0.5,
-	-0.5,
-	0.5,
-	-1.0,
-	0.0,
-	0.0,
-	-0.5,
-	0.5,
-	0.5,
-	-1.0,
-	0.0,
-	0.0,
-	-0.5,
-	0.5,
-	0.5,
-	-1.0,
-	0.0,
-	0.0,
-	-0.5,
-	0.5,
-	-0.5,
-	-1.0,
-	0.0,
-	0.0,
-	-0.5,
-	-0.5,
-	-0.5,
-	-1.0,
-	0.0,
-	0.0,
-
-	// Right face (X+)
-	0.5,
-	-0.5,
-	0.5,
-	1.0,
-	0.0,
-	0.0,
-	0.5,
-	-0.5,
-	-0.5,
-	1.0,
-	0.0,
-	0.0,
-	0.5,
-	0.5,
-	-0.5,
-	1.0,
-	0.0,
-	0.0,
-	0.5,
-	0.5,
-	-0.5,
-	1.0,
-	0.0,
-	0.0,
-	0.5,
-	0.5,
-	0.5,
-	1.0,
-	0.0,
-	0.0,
-	0.5,
-	-0.5,
-	0.5,
-	1.0,
-	0.0,
-	0.0,
-
-	// Top face (Y+)
-	-0.5,
-	0.5,
-	0.5,
-	0.0,
-	1.0,
-	0.0,
-	0.5,
-	0.5,
-	0.5,
-	0.0,
-	1.0,
-	0.0,
-	0.5,
-	0.5,
-	-0.5,
-	0.0,
-	1.0,
-	0.0,
-	0.5,
-	0.5,
-	-0.5,
-	0.0,
-	1.0,
-	0.0,
-	-0.5,
-	0.5,
-	-0.5,
-	0.0,
-	1.0,
-	0.0,
-	-0.5,
-	0.5,
-	0.5,
-	0.0,
-	1.0,
-	0.0,
-
-	// Bottom face (Y-)
-	-0.5,
-	-0.5,
-	-0.5,
-	0.0,
-	-1.0,
-	0.0,
-	0.5,
-	-0.5,
-	-0.5,
-	0.0,
-	-1.0,
-	0.0,
-	0.5,
-	-0.5,
-	0.5,
-	0.0,
-	-1.0,
-	0.0,
-	0.5,
-	-0.5,
-	0.5,
-	0.0,
-	-1.0,
-	0.0,
-	-0.5,
-	-0.5,
-	0.5,
-	0.0,
-	-1.0,
-	0.0,
-	-0.5,
-	-0.5,
-	-0.5,
-	0.0,
-	-1.0,
-	0.0,
+cube_with_uvs :: proc() -> []f32 {
+	return generate_cube_with_uvs()
 }
 
 Face_Index :: enum i32 {
@@ -250,17 +23,22 @@ Scene_Object :: struct {
 	color:               glsl.vec4,
 	face_colors:         [6]glsl.vec4, // Per-face colors
 	use_per_face_colors: bool,
+	use_texture:         bool,
+	texture_atlas:       ^Texture_Atlas,
 	vao, vbo:            u32,
 }
 
 Scene :: struct {
 	objects:          [dynamic]Scene_Object,
 	selected_objects: [dynamic]int,
+	default_atlas:    Texture_Atlas,
 }
 
 scene_init :: proc(scene: ^Scene) {
 	scene.objects = make([dynamic]Scene_Object, 0, 16)
 	scene.selected_objects = make([dynamic]int, 0, 16)
+
+	scene.default_atlas = create_texture_atlas(256, 256)
 }
 
 scene_cleanup :: proc(scene: ^Scene) {
@@ -271,6 +49,7 @@ scene_cleanup :: proc(scene: ^Scene) {
 	}
 	delete(scene.objects)
 	delete(scene.selected_objects)
+	cleanup_texture_atlas(&scene.default_atlas)
 }
 
 scene_add_cube :: proc(scene: ^Scene, pos, scale: glsl.vec3, color: glsl.vec4) -> int {
@@ -280,6 +59,8 @@ scene_add_cube :: proc(scene: ^Scene, pos, scale: glsl.vec3, color: glsl.vec4) -
 		scale               = scale,
 		color               = color,
 		use_per_face_colors = false,
+		use_texture         = false,
+		texture_atlas       = &scene.default_atlas,
 	}
 
 	// Initialize all face colors to object color
@@ -287,19 +68,24 @@ scene_add_cube :: proc(scene: ^Scene, pos, scale: glsl.vec3, color: glsl.vec4) -
 		obj.face_colors[i] = color
 	}
 
-	c := cube
+	cube := generate_cube_with_uvs()
+	defer delete(cube)
 
 	// Create VAO/VBO
 	gl.GenVertexArrays(1, &obj.vao)
 	gl.GenBuffers(1, &obj.vbo)
 	gl.BindVertexArray(obj.vao)
 	gl.BindBuffer(gl.ARRAY_BUFFER, obj.vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(cube), &c[0], gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, len(cube) * size_of(f32), raw_data(cube), gl.STATIC_DRAW)
 
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 0)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0)
 	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 3 * size_of(f32))
+
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 3 * size_of(f32))
 	gl.EnableVertexAttribArray(1)
+
+	gl.VertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 6 * size_of(f32))
+	gl.EnableVertexAttribArray(2)
 
 	append(&scene.objects, obj)
 	return len(scene.objects) - 1
@@ -542,6 +328,79 @@ ray_plane_intersect :: proc(origin, dir, normal: glsl.vec3, distance: f32) -> (t
 	return t, true
 }
 
+scene_raycast_face_uv :: proc(
+	scene: ^Scene,
+	origin, dir: glsl.vec3,
+) -> (
+	obj_idx: int,
+	face_idx: i32,
+	uv: glsl.vec2,
+	ok: bool,
+) {
+	obj_idx = scene_raycast(scene, origin, dir)
+	if obj_idx < 0 do return obj_idx, -1, {0, 0}, false
+
+	obj := scene.objects[obj_idx]
+
+	model := glsl.mat4Translate(obj.position)
+	model *= glsl.mat4Rotate({1, 0, 0}, glsl.radians(obj.rotation.x))
+	model *= glsl.mat4Rotate({0, 1, 0}, glsl.radians(obj.rotation.y))
+	model *= glsl.mat4Rotate({0, 0, 1}, glsl.radians(obj.rotation.z))
+	model *= glsl.mat4Scale(obj.scale)
+
+	inv_model := glsl.inverse_mat4(model)
+	local_origin := (inv_model * glsl.vec4{origin.x, origin.y, origin.z, 1.0}).xyz
+	local_dir := glsl.normalize((inv_model * glsl.vec4{dir.x, dir.y, dir.z, 1.0}).xyz)
+
+	closest_t: f32 = 9999999.0
+	face_idx = -1
+	hit_pos: glsl.vec3
+
+	faces := []struct {
+		normal: glsl.vec3,
+		dist:   f32,
+		idx:    Face_Index,
+	} {
+		{{0, 0, 1}, 0.5, .FRONT},
+		{{0, 0, -1}, 0.5, .BACK},
+		{{-1, 0, 0}, 0.5, .LEFT},
+		{{1, 0, 0}, 0.5, .RIGHT},
+		{{0, 1, 0}, 0.5, .TOP},
+		{{0, -1, 0}, 0.5, .BOTTOM},
+	}
+
+	for face in faces {
+		if t, face_ok := ray_plane_intersect(local_origin, local_dir, face.normal, face.dist);
+		   face_ok {
+			hit := local_origin + local_dir * t
+
+			in_bounds := false
+      face := Face_Index(face_idx)
+			switch face {
+			case .FRONT, .BACK:
+				in_bounds = abs(hit.x) <= 0.5 && abs(hit.y) <= 0.5
+			case .LEFT, .RIGHT:
+				in_bounds = abs(hit.y) <= 0.5 && abs(hit.y) <= 0.5
+			case .TOP, .BOTTOM:
+				in_bounds = abs(hit.x) <= 0.5 && abs(hit.z) <= 0.5
+			}
+
+			if in_bounds && t < closest_t {
+				closest_t = t
+				face_idx = i32(face_idx)
+				hit_pos = hit
+			}
+		}
+	}
+
+	if face_idx >= 0 {
+		uv = get_face_uv_from_hit(hit_pos, Face_Index(face_idx))
+		return obj_idx, face_idx, uv, true
+	}
+
+	return obj_idx, -1, {0, 0}, false
+}
+
 scene_render :: proc(scene: ^Scene, shader: u32, view, proj: glsl.mat4, highlight_face: i32 = -1) {
 	gl.UseProgram(shader)
 	v := view
@@ -566,6 +425,15 @@ scene_render :: proc(scene: ^Scene, shader: u32, view, proj: glsl.mat4, highligh
 		model *= glsl.mat4Scale(obj.scale)
 
 		gl.UniformMatrix4fv(gl.GetUniformLocation(shader, "model"), 1, false, &model[0, 0])
+
+		use_tex := i32(obj.use_texture ? 1 : 0)
+		gl.Uniform1i(gl.GetUniformLocation(shader, "useTexture"), use_tex)
+
+		if obj.use_texture && obj.texture_atlas != nil {
+			gl.ActiveTexture(gl.TEXTURE0)
+			gl.BindTexture(gl.TEXTURE_2D, obj.texture_atlas.texture_id)
+			gl.Uniform1i(gl.GetUniformLocation(shader, "textureSampler"), 0)
+		}
 
 		// Draw with selection outline
 		if is_selected {

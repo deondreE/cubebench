@@ -39,6 +39,14 @@ Tool_Mode :: enum {
 	PAINT,
 }
 
+Paint_State :: struct {
+	active:         bool,
+	brush_color:    glsl.vec4,
+	brush_size:     i32,
+	last_paint_pos: glsl.vec2,
+	painting:       bool,
+}
+
 Edit_Mode :: enum {
 	OBJECT,
 	FACE,
@@ -49,6 +57,70 @@ Axis :: enum {
 	X,
 	Y,
 	Z,
+}
+
+paint_state: Paint_State = {
+	active         = false,
+	brush_color    = {1, 0, 0, 1},
+	brush_size     = 5,
+	last_paint_pos = {-1, -1},
+	painting       = false,
+}
+
+paint_on_face :: proc(scene: ^Scene, obj_idx: int, face_idx: i32, uv: glsl.vec2) {
+	if obj_idx < 0 || obj_idx >= len(scene.objects) do return
+
+	obj := scene.objects[obj_idx]
+	if obj.texture_atlas == nil do return
+
+	if !obj.use_texture {
+		obj.use_texture = true
+	}
+
+	u0, v0, u1, v1 := get_face_uv_region(Face_Index(face_idx), obj.texture_atlas.width)
+
+	// convert uv to pixel space
+	local_u := uv.x
+	local_v := uv.y
+
+	texture_u := u0 + local_u * (u1 - u0)
+	texture_v := v0 + local_v * (v1 - v0)
+
+	pixel_x := i32(texture_u * f32(obj.texture_atlas.width))
+	pixel_y := i32(texture_v * f32(obj.texture_atlas.height))
+
+	paint_brush(
+		obj.texture_atlas,
+		pixel_x,
+		pixel_y,
+		paint_state.brush_size,
+		paint_state.brush_color,
+	)
+}
+
+// UV coords from the raycast hit.
+get_face_uv_from_hit :: proc(local_hit: glsl.vec3, face_idx: Face_Index) -> glsl.vec2 {
+	switch face_idx {
+	case .FRONT:
+		// Z+
+		return {(local_hit.x + 0.5), (local_hit.y + 0.5)}
+	case .BACK:
+		// Z-
+		return {(0.5 - local_hit.x), (local_hit.y + 0.5)}
+	case .LEFT:
+		// X-
+		return {(0.5 - local_hit.z), (local_hit.y + 0.5)}
+	case .RIGHT:
+		// X+
+		return {(0.5 - local_hit.z + 0.5), (local_hit.y + 0.5)}
+	case .TOP:
+		// Y+
+		return {(local_hit.x + 0.5), (0.5 - local_hit.z)}
+	case .BOTTOM:
+		// Y-
+		return {(local_hit.x + 0.5), (local_hit.z + 0.5)}
+	}
+	return {0, 0}
 }
 
 calculate_ray :: proc(nx, ny: f32, proj, view: glsl.mat4) -> (origin, dir: glsl.vec3) {
@@ -171,6 +243,18 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 			tool_mode = .EXTRUDE
 		case glfw.KEY_P:
 			tool_mode = .PAINT
+		case glfw.KEY_T:
+			if len(scene.selected_objects) > 0 {
+				obj := &scene.objects[scene.selected_objects[0]]
+				obj.use_texture = !obj.use_texture
+			}
+		case glfw.KEY_L:
+			if len(scene.selected_objects) > 0 {
+				obj := &scene.objects[scene.selected_objects[0]]
+				if load_texture_from_file(obj.texture_atlas, "texture.png") {
+					obj.use_texture = true
+				}
+			}
 		case glfw.KEY_TAB:
 			edit_mode = edit_mode == .OBJECT ? .FACE : .OBJECT
 		case glfw.KEY_DELETE:
@@ -370,6 +454,8 @@ main :: proc() {
 	gridShader, _ := gl.load_shaders_file("./shaders/grid.vs", "./shaders/grid.fs")
 	gizmoShader, _ := gl.load_shaders_file("./shaders/gizmos.vs", "./shaders/gizmos.fs")
 
+	// TODO: Add the ability to see a pixel grid on the object in paint mode.
+
 	// Grid VAO
 	gVAO, gVBO: u32
 	gl.GenVertexArrays(1, &gVAO); gl.GenBuffers(1, &gVBO)
@@ -495,7 +581,21 @@ main :: proc() {
 						scene_scale_selected(&scene, active_axis, dx + dy)
 					case .ROTATE:
 						scene_rotate_selected(&scene, active_axis, (dx + dy) * 2.0)
-					case .SELECT, .EXTRUDE, .PAINT:
+					case .PAINT:
+						if glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS {
+							obj_idx, face_idx, uv, hit_ok := scene_raycast_face_uv(
+								&scene,
+								origin,
+								dir,
+							)
+							if hit_ok {
+								paint_on_face(&scene, obj_idx, face_idx, uv)
+								paint_state.painting = true
+							}
+						} else {
+							paint_state.painting = false
+						}
+					case .SELECT, .EXTRUDE:
 					}
 				}
 			} else {
