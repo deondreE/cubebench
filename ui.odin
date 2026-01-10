@@ -89,6 +89,8 @@ UI_Context :: struct {
 	clip_rect:            UI_Rect,
 	panel_state: UI_Panel_State,
 	screen_height: i32,
+	panels: [dynamic]UI_Rect,
+	current_panel_idx: int,
 	current_panel:        UI_Rect,
 	cursor_x, cursor_y:   f32,
 	row_height:           f32,
@@ -446,6 +448,9 @@ ui_begin_frame :: proc(ctx: ^UI_Context, window: glfw.WindowHandle, scroll_delta
 
 	ctx.hot_id = 0
 
+	clear(&ctx.panels)
+	ctx.current_panel_idx = -1
+
 	if scroll_delta != 0 {
 		ctx.active_id = 0
 	}
@@ -630,6 +635,9 @@ ui_pop_clip :: proc() {
 ui_panel_begin :: proc(ctx: ^UI_Context, x, y, w, h: f32, title: string) {
 	ctx.current_panel = UI_Rect{x, y, w, h}
 
+	append(&ctx.panels, ctx.current_panel)
+	ctx.current_panel_idx = len(ctx.panels) - 1
+
 	ctx.panel_state.content_height = 0
 	ctx.panel_state.max_scroll = 0
 
@@ -766,7 +774,7 @@ ui_button :: proc(ctx: ^UI_Context, text: string, width: f32 = 0) -> bool {
 
 	rect := UI_Rect{ctx.cursor_x, ctx.cursor_y, w, h}
 
-	is_hot := point_in_rect(ctx.mouse_x, ctx.mouse_y, rect)
+	is_hot := point_in_rect(ctx.mouse_x, ctx.mouse_y, rect) && ui_is_mouse_over_current_panel(ctx)
 	if is_hot do ctx.hot_id = id
 
 	is_active := ctx.active_id == id
@@ -806,7 +814,7 @@ ui_icon_button :: proc(ctx: ^UI_Context, icon_name: string, width: f32 = 0) -> b
 
 	rect := UI_Rect{ctx.cursor_x, ctx.cursor_y, w, h}
 
-	is_hot := point_in_rect(ctx.mouse_x, ctx.mouse_y, rect)
+	is_hot := point_in_rect(ctx.mouse_x, ctx.mouse_y, rect) && ui_is_mouse_over_current_panel(ctx)
 	if is_hot do ctx.hot_id = id
 
 	is_active := ctx.active_id == id
@@ -1077,6 +1085,7 @@ ui_cleanup :: proc(ctx: ^UI_Context) {
 	delete(ctx.batch.text_vertices)
 	delete(ctx.batch.image_vertices)
 	delete(ctx.batch.commands)
+	delete(ctx.panels)
 
 	// Clean up icon textures
 	for _, image in ctx.icon_cache.images {
@@ -1101,5 +1110,18 @@ ui_cleanup :: proc(ctx: ^UI_Context) {
 // === Helper to check if mouse is over any UI ===
 
 ui_is_mouse_over :: proc(ctx: ^UI_Context) -> bool {
-	return ctx.hot_id != 0 || ctx.active_id != 0
+	if ctx.hot_id != 0 || ctx.active_id != 0 do return true
+
+	for panel in ctx.panels {
+		if point_in_rect(ctx.mouse_x, ctx.mouse_y, panel) {
+			return true
+		}
+	}
+
+	return false
+}
+
+ui_is_mouse_over_current_panel :: proc(ctx: ^UI_Context) -> bool {
+	if ctx.current_panel_idx < 0 do return false
+	return point_in_rect(ctx.mouse_x, ctx.mouse_y, ctx.current_panel)
 }
