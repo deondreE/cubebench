@@ -91,6 +91,46 @@ scene_add_cube :: proc(scene: ^Scene, pos, scale: glsl.vec3, color: glsl.vec4) -
 	return len(scene.objects) - 1
 }
 
+scene_add_quad :: proc (scene: ^Scene, pos, scale: glsl.vec3, color: glsl.vec4) -> int {
+	obj := Scene_Object{
+		position = pos,
+		rotation = {0, 0, 0},
+		scale = scale,
+		color = color,
+		use_per_face_colors = false,
+		use_texture = false,
+		texture_atlas = &scene.default_atlas,
+	}
+
+	for i in 0 ..< 6 {
+		obj.face_colors[i] = color
+	}
+
+	quad_data := generate_quad_with_uvs()
+	defer delete(quad_data)
+
+	gl.Disable(gl.CULL_FACE)
+	gl.GenVertexArrays(1, &obj.vao)
+	gl.GenBuffers(1, &obj.vbo)
+	gl.BindVertexArray(obj.vao)
+	gl.BindBuffer(gl.ARRAY_BUFFER, obj.vbo)
+	gl.BufferData(gl.ARRAY_BUFFER, len(quad_data) * size_of(f32), raw_data(quad_data), gl.STATIC_DRAW)
+
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0)
+	gl.EnableVertexAttribArray(0)
+
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 3 * size_of(f32))
+	gl.EnableVertexAttribArray(1)
+
+	gl.VertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 6 * size_of(f32))
+	gl.EnableVertexAttribArray(2)
+
+	append(&scene.objects, obj)
+
+	gl.Enable(gl.CULL_FACE)
+	return len(scene.objects) - 1
+}
+
 scene_select_object :: proc(scene: ^Scene, index: int) {
 	clear(&scene.selected_objects)
 	if index >= 0 && index < len(scene.objects) {
@@ -498,9 +538,10 @@ scene_render :: proc(scene: ^Scene, shader: u32, view, proj: glsl.mat4, highligh
 				obj.color.b,
 				obj.color.a,
 			)
-
+			gl.Disable(gl.CULL_FACE)
 			gl.BindVertexArray(obj.vao)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
+			gl.Enable(gl.CULL_FACE)
 		}
 	}
 }

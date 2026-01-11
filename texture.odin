@@ -163,14 +163,13 @@ get_face_uv_region :: proc(face_idx: Face_Index, texture_size: i32) -> (u0, v0, 
 	return 0, 0, 1, 1
 }
 
+add_vertex :: proc(v: ^[dynamic]f32, x, y, z, nx, ny, nz, u, v_coord: f32) {
+	append(v, x, y, z, nx, ny, nz, u, v_coord)
+}
+
 generate_cube_with_uvs :: proc(allocator := context.allocator) -> []f32 {
 	// 6 faces * 6 vertices per face * 8 floats per vertex (pos, normal, uv) = 288
 	vertices := make([dynamic]f32, 0, 288, allocator)
-
-	// Helper to reduce repetitive append calls
-	add_vertex :: proc(v: ^[dynamic]f32, x, y, z, nx, ny, nz, u, v_coord: f32) {
-		append(v, x, y, z, nx, ny, nz, u, v_coord)
-	}
 
 	// Front face (Z+)
 	u0, v0, u1, v1 := get_face_uv_region(.FRONT, 0)
@@ -225,6 +224,20 @@ generate_cube_with_uvs :: proc(allocator := context.allocator) -> []f32 {
 	add_vertex(&vertices, 0.5, -0.5, 0.5, 0.0, -1.0, 0.0, u1, v0)
 	add_vertex(&vertices, -0.5, -0.5, 0.5, 0.0, -1.0, 0.0, u0, v0)
 	add_vertex(&vertices, -0.5, -0.5, -0.5, 0.0, -1.0, 0.0, u0, v1)
+
+	return vertices[:]
+}
+
+generate_quad_with_uvs :: proc() -> []f32 {
+	vertices := make([dynamic]f32, 0, 48)
+
+    add_vertex(&vertices, -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+	add_vertex(&vertices, 0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 1.0)
+	add_vertex(&vertices, 0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0)
+
+	add_vertex(&vertices, 0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0)
+	add_vertex(&vertices, -0.5, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
+	add_vertex(&vertices, -0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0)
 
 	return vertices[:]
 }

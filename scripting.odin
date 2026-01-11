@@ -86,6 +86,7 @@ lua_register_api :: proc(L: ^lua.State) {
 	// Scene API
 	lua_register_global_table(L, "Scene")
 	lua_register_method(L, "Scene", "addCube", lua_scene_add_cube)
+	lua_register_method(L, "Scene", "addQuad", lua_scene_add_quad)
 	lua_register_method(L, "Scene", "count", lua_scene_count)
 	lua_register_method(L, "Scene", "clear", lua_scene_clear)
 	lua_register_method(L, "Scene", "selected", lua_scene_selected)
@@ -247,6 +248,52 @@ lua_scene_add_cube :: proc "c" (L: ^lua.State) -> i32 {
 
 	return 1
 }
+
+
+lua_scene_add_quad :: proc "c" (L: ^lua.State) -> i32 {
+	context = runtime.default_context()
+
+	if !lua.istable(L, 1) {
+		lua.pushstring(L, "Expected table argument")
+		lua.error(L)
+		return 0
+	}
+
+	pos := glsl.vec3{0, 0, 0}
+	size := glsl.vec3{1, 1, 1}
+	color := glsl.vec4{1, 1, 1, 1}
+
+	lua.getfield(L, 1, "position")
+	if lua.istable(L, -1) {
+		lua.rawgeti(L, -1, 1); pos.x = f32(lua.tonumber(L, -1)); lua.pop(L, 1)
+		lua.rawgeti(L, -1, 2); pos.y = f32(lua.tonumber(L, -1)); lua.pop(L, 1)
+		lua.rawgeti(L, -1, 3); pos.z = f32(lua.tonumber(L, -1)); lua.pop(L, 1)
+	}
+	lua.pop(L, 1)
+
+	lua.getfield(L, 1, "size")
+	if lua.istable(L, -1) {
+		lua.rawgeti(L, -1, 1); size.x = f32(lua.tonumber(L, -1)); lua.pop(L, 1)
+		lua.rawgeti(L, -1, 2); size.y = f32(lua.tonumber(L, -1)); lua.pop(L, 1)
+		lua.rawgeti(L, -1, 3); size.z = f32(lua.tonumber(L, -1)); lua.pop(L, 1)
+	}
+	lua.pop(L, 1)
+
+	lua.getfield(L, 1, "color")
+	if lua.istable(L, -1) {
+		lua.rawgeti(L, -1, 1); color.r = f32(lua.tonumber(L, -1)); lua.pop(L, 1)
+		lua.rawgeti(L, -1, 2); color.g = f32(lua.tonumber(L, -1)); lua.pop(L, 1)
+		lua.rawgeti(L, -1, 3); color.b = f32(lua.tonumber(L, -1)); lua.pop(L, 1)
+	}
+	lua.pop(L, 1)
+
+	obj_idx := scene_add_quad(&scene, pos, size, color)
+
+	lua.pushinteger(L, lua.Integer(obj_idx))
+
+	return 1
+}
+
 
 lua_scene_count :: proc "c" (L: ^lua.State) -> i32 {
 	context = runtime.default_context()

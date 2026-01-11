@@ -3,6 +3,12 @@ Scene.clear()
 local grid_size = 5
 local cubes = {}
 
+Scene.addQuad({
+  position = {0, 0, 0},
+  size = {1, 1, 1},
+  color = {0, 1, 0},
+})
+
 for x = -grid_size, grid_size do
 
 for z = -grid_size, grid_size do

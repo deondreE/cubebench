@@ -2,11 +2,10 @@ Little blockbench clone because blockbench is slow :P
 
 ## TODO
 
-UV Editor - Done
+CAMERA PANNING :{
 
 User Interface:
 Resize panels
-panels should be clip rects
 panels should be ignoreable
 
 - [ ] Animation Timeline
@@ -43,5 +42,3 @@ Animation
 - Timeline simple bone system.
 
 Block Particles ??????
-
-Scripting
