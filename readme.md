@@ -2,6 +2,8 @@ Little blockbench clone because blockbench is slow :P
 
 ## TODO
 
+UV Editor - Done 
+
 User Interface:
 Resize panels
 panels should be clip rects
@@ -16,8 +18,6 @@ TOOLS:
 - Top / Bottom / Left / Right Snap Face
 - Pivot snap points
 
-- Copy / Paste
-  - Faces {QUAD}
 - Extrude
 
 Add Support for Other shapes:

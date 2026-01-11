@@ -67,6 +67,8 @@ paint_state: Paint_State = {
 	painting       = false,
 }
 
+uv_editor: UV_Editor
+
 paint_on_face :: proc(scene: ^Scene, obj_idx: int, face_idx: i32, uv: glsl.vec2) {
 	if obj_idx < 0 || obj_idx >= len(scene.objects) do return
 
@@ -182,7 +184,7 @@ draw_gizmo_axis :: proc(
 		tip_model := model * glsl.mat4Translate({0, 0, 1.0})
 		gl.UniformMatrix4fv(m_loc, 1, false, &tip_model[0, 0])
 		gl.BindVertexArray(vao_tip)
-		gl.DrawArrays(gl.TRIANGLES, 96, 200)
+		gl.DrawArrays(gl.TRIANGLES, 96, 32)
 
 	case .ROTATE:
 		gl.LineWidth(3.0)
@@ -200,6 +202,7 @@ framebuffer_size_callback :: proc "c" (window: glfw.WindowHandle, width, height:
 }
 
 mouse_callback :: proc "c" (window: glfw.WindowHandle, xpos, ypos: f64) {
+	context = runtime.default_context()
 	if glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_RIGHT) != glfw.PRESS {
 		first_mouse = true
 		return
@@ -216,11 +219,32 @@ mouse_callback :: proc "c" (window: glfw.WindowHandle, xpos, ypos: f64) {
 	camera_yaw += xoffset * sensitivity
 	camera_pitch += yoffset * sensitivity
 	camera_pitch = clamp(camera_pitch, -89.0, 89.0)
+
+	if uv_editor.visible {
+    middle_pressed := glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS
+    uv_editor_handle_input(&uv_editor, f64(xoffset), f64(yoffset), 
+        glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS,
+        middle_pressed)
+  }
 }
 
 scroll_callback :: proc "c" (window: glfw.WindowHandle, xoffset, yoffset: f64) {
-	camera_dist -= f32(yoffset) * 0.5
-	camera_dist = clamp(camera_dist, 1.0, 50.0)
+    context = runtime.default_context()
+    
+    mx, my := glfw.GetCursorPos(window)
+    local_x := f32(mx) - uv_editor.x
+    local_y := f32(my) - uv_editor.y
+    
+    // Check if mouse is over UV editor
+    if uv_editor.visible && 
+       local_x >= 0 && local_x <= uv_editor.width &&
+       local_y >= 0 && local_y <= uv_editor.height {
+        uv_editor_handle_scroll(&uv_editor, mx, my, yoffset)
+    } else {
+        // Regular camera zoom
+        camera_dist -= f32(yoffset) * 0.5
+        camera_dist = clamp(camera_dist, 1.0, 50.0)
+    }
 }
 
 key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods: i32) {
@@ -247,6 +271,12 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 			} else {
 				tool_mode = .SCALE
 			}
+		case glfw.KEY_U:
+			uv_editor.visible = !uv_editor.visible
+			if uv_editor.visible && len(scene.selected_objects) > 0 {
+        obj := &scene.objects[scene.selected_objects[0]]
+        uv_editor_update_mesh(&uv_editor, obj)
+      }
 		case glfw.KEY_R:
 			tool_mode = .ROTATE
 		case glfw.KEY_E:
@@ -268,11 +298,11 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 		case glfw.KEY_TAB:
 			edit_mode = edit_mode == .OBJECT ? .FACE : .OBJECT
 		case glfw.KEY_DELETE:
-			record_delete_object(&scene, 0)
+			record_delete_object(&scene, len(scene.objects)+1)
 			scene_delete_selected(&scene)
 		case glfw.KEY_D:
 			if mods == glfw.MOD_CONTROL {
-				record_add_object(&scene, 0)
+				record_add_object(&scene, len(scene.objects)+1)
 				scene_duplicate_selected(&scene)
 			}
 		}
@@ -393,6 +423,9 @@ main :: proc() {
 
 	scene_init(&scene)
 	defer scene_cleanup(&scene)
+
+	uv_editor_init(&uv_editor, 20, 100, 400, 400)
+	defer uv_editor_cleanup(&uv_editor)
 
 	undo_init(100)
 	defer undo_cleanup()
@@ -619,6 +652,12 @@ main :: proc() {
 		gl.Clear(gl.DEPTH_BUFFER_BIT)
 		ui_render_begin(&ui, SCR_WIDTH, SCR_HEIGHT)
 		render_ui(&ui, &scene, &tool_mode, &edit_mode)
+
+		if uv_editor.visible && len(scene.selected_objects) > 0 {
+      obj := &scene.objects[scene.selected_objects[0]]
+      uv_editor_render(&uv_editor, obj, &ui)
+    }
+
 		ui_render_end(&ui)
 
 		ui_end_frame(&ui)
