@@ -1112,6 +1112,15 @@ ui_cleanup :: proc(ctx: ^UI_Context) {
 ui_is_mouse_over :: proc(ctx: ^UI_Context) -> bool {
 	if ctx.hot_id != 0 || ctx.active_id != 0 do return true
 
+	if uv_editor.visible {
+		mx := ctx.mouse_x
+		my := ctx.mouse_y
+		if mx >= uv_editor.x && mx <= uv_editor.x + uv_editor.width &&
+			my >= uv_editor.y && my <= uv_editor.y + uv_editor.height {
+				return true
+		}
+	}
+
 	for panel in ctx.panels {
 		if point_in_rect(ctx.mouse_x, ctx.mouse_y, panel) {
 			return true

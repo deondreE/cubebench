@@ -128,7 +128,7 @@ paint_brush :: proc(atlas: ^Texture_Atlas, center_x, center_y, radius: i32, colo
 	for dy in -radius ..= radius {
 		for dx in -radius ..= radius {
 			if dx * dx + dy * dy <= radius * radius {
-				paint_pixel(atlas, center_x + dx, center_y * dy, color)
+				paint_pixel(atlas, center_x + dx, center_y + dy, color)
 			}
 		}
 	}

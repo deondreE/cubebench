@@ -184,7 +184,7 @@ draw_gizmo_axis :: proc(
 		tip_model := model * glsl.mat4Translate({0, 0, 1.0})
 		gl.UniformMatrix4fv(m_loc, 1, false, &tip_model[0, 0])
 		gl.BindVertexArray(vao_tip)
-		gl.DrawArrays(gl.TRIANGLES, 96, 32)
+		gl.DrawArrays(gl.TRIANGLES, 96, 36)
 
 	case .ROTATE:
 		gl.LineWidth(3.0)
@@ -220,23 +220,31 @@ mouse_callback :: proc "c" (window: glfw.WindowHandle, xpos, ypos: f64) {
 	camera_pitch += yoffset * sensitivity
 	camera_pitch = clamp(camera_pitch, -89.0, 89.0)
 
-	if uv_editor.visible {
-    middle_pressed := glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS
-    uv_editor_handle_input(&uv_editor, f64(xoffset), f64(yoffset), 
-        glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS,
-        middle_pressed)
-  }
+	if uv_editor.visible && len(scene.selected_objects) > 0 {
+		obj := &scene.objects[scene.selected_objects[0]]
+		left_pressed := glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS
+		middle_pressed := glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS
+
+		uv_editor_handle_input(&uv_editor, xpos, ypos, left_pressed, middle_pressed, obj)
+
+		// if painting switch to next frame
+		for uv_editor.is_painting {
+			glfw.SwapBuffers(window)
+			glfw.PollEvents()
+			continue
+		}
+	}
 }
 
 scroll_callback :: proc "c" (window: glfw.WindowHandle, xoffset, yoffset: f64) {
     context = runtime.default_context()
-    
+
     mx, my := glfw.GetCursorPos(window)
     local_x := f32(mx) - uv_editor.x
     local_y := f32(my) - uv_editor.y
-    
+
     // Check if mouse is over UV editor
-    if uv_editor.visible && 
+    if uv_editor.visible &&
        local_x >= 0 && local_x <= uv_editor.width &&
        local_y >= 0 && local_y <= uv_editor.height {
         uv_editor_handle_scroll(&uv_editor, mx, my, yoffset)

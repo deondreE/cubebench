@@ -424,6 +424,9 @@ scene_render :: proc(scene: ^Scene, shader: u32, view, proj: glsl.mat4, highligh
 		model *= glsl.mat4Rotate({0, 0, 1}, glsl.radians(obj.rotation.z))
 		model *= glsl.mat4Scale(obj.scale)
 
+		selected_loc := gl.GetUniformLocation(shader, "isSelected")
+		gl.Uniform1i(selected_loc, i32(is_selected))
+
 		gl.UniformMatrix4fv(gl.GetUniformLocation(shader, "model"), 1, false, &model[0, 0])
 
 		use_tex := i32(obj.use_texture ? 1 : 0)
@@ -457,6 +460,13 @@ scene_render :: proc(scene: ^Scene, shader: u32, view, proj: glsl.mat4, highligh
 
 			gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 			gl.Disable(gl.POLYGON_OFFSET_FILL)
+		}
+
+		highlight_loc := gl.GetUniformLocation(shader, "highlightFace")
+		if is_selected && highlight_face >= 0 {
+			gl.Uniform1i(highlight_loc, highlight_face)
+		} else {
+			gl.Uniform1i(highlight_loc, -1)
 		}
 
 		// Draw faces with colors
