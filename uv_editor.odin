@@ -66,10 +66,10 @@ uv_editor_create_quad :: proc(editor: ^UV_Editor) {
 	quad_vertices := [?]f32 {
 		0.0, 0.0, 0.0, 1.0,
 		1.0, 0.0, 1.0, 1.0,
-		1.0, 0.0, 1.0, 0.0,
-		0.0, 0.0, 0.0, 1.0,
-		1.0, 1.0, 1.0, 0.0,
-		0.0, 1.0, 0.0, 0.0,
+		1.0, 1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0, 1.0,
+		0.0, 1.0, 0.0, 1.0,
+		0.0, 0.0, 0.0, 0.0,
 	}
 
 	gl.GenVertexArrays(1, &editor.quad_vao)
@@ -81,6 +81,7 @@ uv_editor_create_quad :: proc(editor: ^UV_Editor) {
 
 	gl.VertexAttribPointer(0, 2, gl.FLOAT, gl. FALSE, 4 * size_of(f32), 0)
 	gl.EnableVertexAttribArray(0)
+
 	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 4 * size_of(f32), 2 * size_of(f32))
 	gl.EnableVertexAttribArray(1)
 }
@@ -262,15 +263,21 @@ uv_editor_render :: proc(editor: ^UV_Editor, obj: ^Scene_Object, ctx: ^UI_Contex
 	content_y := editor.y + header_height
 	content_height := editor.height - header_height - 60 // Leave space for controls
 
+	face_names := [6]string{"Front", "Right", "Back", "Left", "Top", "Bottom"}
+
+	face_screen_width := editor.width / 3.0
+	face_screen_height := content_height / 2.0
+
 	gl.Viewport(i32(editor.x), i32(SCR_HEIGHT - content_y - content_height),
 		i32(editor.width), i32(content_height))
 
 	gl.Scissor(i32(editor.x), i32(SCR_HEIGHT - content_y - content_height),
 		i32(editor.width), i32(content_height))
+	gl.Disable(gl.DEPTH_TEST)
+	gl.Disable(gl.CULL_FACE)
+	gl.Enable(gl.BLEND)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.Enable(gl.SCISSOR_TEST)
-
-	face_width := 1.0 / 3.0
-	face_height := 1.0 / 2.0
 
 	gl.UseProgram(editor.uv_shader)
 
@@ -282,17 +289,15 @@ uv_editor_render :: proc(editor: ^UV_Editor, obj: ^Scene_Object, ctx: ^UI_Contex
 		gl.Uniform1i(tex_loc, 0)
 	}
 
-	face_names := [6]string{"Front", "Right", "Back", "Left", "Top", "Bottom"}
-
 	for face_idx in 0..<6 {
-		col := face_idx % 3
-		row := face_idx / 3
+		col := face_idx % 3  // 0, 1, 2 for columns
+		row := face_idx / 3  // 0 for top row, 1 for bottom row
 
-		x := f64(col) * face_width * 2.0 - 1.0
-		y := 1.0 - f64(row) * face_height * 2.0 - face_height * 2.0
+		x_normalized := f32(col) / 3.0
+		y_normalized := 0.5 if row == 0.0 else 0.0
 
-		model := glsl.mat4Scale({f32(face_width), f32(face_height), 1.0})
-		model *= glsl.mat4Translate({f32(col), 1.0 - f32(row) - 1.0, 0.0})
+		model := glsl.mat4Scale({1.0 / 3.0, 1.0 / 2.0, 1.0})
+		model = glsl.mat4Translate({x_normalized, f32(y_normalized), 0.0}) * model
 
 		projection := glsl.mat4Ortho3d(0, 1, 0, 1, -1, 1)
 
@@ -307,28 +312,30 @@ uv_editor_render :: proc(editor: ^UV_Editor, obj: ^Scene_Object, ctx: ^UI_Contex
 		gl.Uniform4f(uv_loc, u0, v0, u1, v1)
 
 		gl.BindVertexArray(editor.quad_vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 6)
-
-		gl.Disable(gl.SCISSOR_TEST)
-
-		border_x := editor.x + f32(col) * (editor.width / 3.0)
-		border_y := content_y + f32(row) * (content_height / 2.0)
-		border_w := editor.width / 3.0
-		border_h := content_height / 2.0
-
-		border_rect := UI_Rect{border_x, border_y, border_w, border_h}
-		batch_rect_outline(ctx, border_rect, UI_Color{0.4, 0.4, 0.45, 1.0}, 1)
-
-		batch_text(ctx, face_names[face_idx], border_x + 5, border_y + 5,
-			UI_Color{0.9, 0.9, 0.9, 0.8})
-
-		gl.Enable(gl.SCISSOR_TEST)
+		gl.DrawArrays(gl.LINE_LOOP, 0, 6)
 	}
 
 	gl.Disable(gl.SCISSOR_TEST)
+	gl.Enable(gl.DEPTH_TEST)
+	gl.Enable(gl.CULL_FACE)
 	gl.Viewport(0, 0, SCR_WIDTH, SCR_HEIGHT)
 
-	// Draw controls at bottom
+	for face_idx in 0..<6 {
+		col := face_idx % 3
+		row := face_idx / 3
+
+		border_x := editor.x + f32(col) * face_screen_width
+		border_y := content_y + f32(row) * face_screen_height
+
+		border_rect := UI_Rect{border_x, border_y, face_screen_width, face_screen_height}
+		batch_rect_outline(ctx, border_rect, UI_Color{0.4, 0.4, 0.45, 1.0}, 2)
+
+		label_bg := UI_Rect{border_x + 4, border_y + 4, 60, 18}
+		batch_rect(ctx, label_bg, UI_Color{0.0, 0.0, 0.0, 0.7})
+		batch_text(ctx, face_names[face_idx], border_x + 7, border_y + 7,
+			UI_Color{1.0, 1.0, 1.0, 1.0})
+	}
+
 	uv_editor_render_controls(editor, ctx, obj)
 }
 
@@ -354,7 +361,6 @@ uv_editor_render_controls :: proc(editor: ^UV_Editor, ctx: ^UI_Context, obj: ^Sc
 
 	ctx.cursor_x += color_size + 10
 
-	// Quick color buttons
 	quick_colors := [?]glsl.vec4{
 		{1, 0, 0, 1}, // Red
 		{0, 1, 0, 1}, // Green
@@ -383,7 +389,6 @@ uv_editor_render_controls :: proc(editor: ^UV_Editor, ctx: ^UI_Context, obj: ^Sc
 	ctx.cursor_x = editor.x + 10
 	ctx.cursor_y += 35
 
-	// Brush size slider
 	ui_label(ctx, fmt.tprintf("Brush Size: %d", editor.paint_brush_size))
 
 	slider_width: f32 = 200
@@ -412,14 +417,13 @@ uv_editor_render_controls :: proc(editor: ^UV_Editor, ctx: ^UI_Context, obj: ^Sc
 }
 
 uv_editor_draw_background_quad :: proc(editor: ^UV_Editor) {
-	// Simple quad covering UV space (0,0) to (1,1)
 	quad_vertices := [?]f32{
 		0.0, 0.0,  0.0, 0.0,
 		1.0, 0.0,  1.0, 0.0,
 		1.0, 1.0,  1.0, 1.0,
-		0.0, 0.0,  0.0, 0.0,
 		1.0, 1.0,  1.0, 1.0,
 		0.0, 1.0,  0.0, 1.0,
+		0.0, 0.0,  0.0, 0.0,
 	}
 
 	vao, vbo: u32
@@ -503,7 +507,7 @@ void main() {
 
     // Map texture coordinates to the face's UV region
     float u = uvRegion.x + aTexCoord.x * (uvRegion.z - uvRegion.x);
-    float v = uvRegion.y + aTexCoord.y * (uvRegion.w - uvRegion.y);
+    float v = uvRegion.y + (1.0 - aTexCoord.y) * (uvRegion.w - uvRegion.y);
     TexCoord = vec2(u, v);
 }
 `

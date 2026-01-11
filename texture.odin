@@ -143,20 +143,22 @@ get_face_uv_region :: proc(face_idx: Face_Index, texture_size: i32) -> (u0, v0, 
 	grid_w := f32(1.0 / 3.0)
 	grid_h := f32(1.0 / 2.0)
 
+	eps := 0.5 / f32(texture_size)
+
+	col, row: f32
 	switch face_idx {
-	case .FRONT:
-		return 0 * grid_w, 0 * grid_h, 1 * grid_w, 1 * grid_h
-	case .RIGHT:
-		return 1 * grid_w, 0 * grid_h, 2 * grid_w, 1 * grid_h
-	case .BACK:
-		return 2 * grid_w, 0 * grid_h, 3 * grid_w, 1 * grid_h
-	case .LEFT:
-		return 0 * grid_w, 1 * grid_h, 1 * grid_w, 2 * grid_h
-	case .TOP:
-		return 1 * grid_w, 1 * grid_h, 2 * grid_w, 2 * grid_h
-	case .BOTTOM:
-		return 2 * grid_w, 1 * grid_h, 3 * grid_w, 2 * grid_h
+		case .FRONT: col, row = 0, 0
+		case .RIGHT: col, row = 1, 0
+		case .BACK: col, row = 2, 0
+		case .LEFT: col, row = 0, 1
+		case .TOP: col, row = 1, 1
+		case .BOTTOM: col, row = 2, 1
 	}
+
+	u0 = (col * grid_w) + eps
+	v0 = (row * grid_h) + eps
+	u1 = ((col + 1) * grid_w) + eps
+	v1 = ((row + 1) * grid_h) + eps
 
 	return 0, 0, 1, 1
 }
