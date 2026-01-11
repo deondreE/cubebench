@@ -107,6 +107,8 @@ lua_register_api :: proc(L: ^lua.State) {
 
 	lua.register(L, "print", lua_print)
 
+	lua_register_object_metatable(L)
+
 	fmt.println("Lua API registered")
 }
 
@@ -127,6 +129,7 @@ lua_register_method :: proc(
 	lua.pop(L, 1)
 }
 
+// TODO: scene_delete_object(&scene, obj_idx)
 // Object metatable for object methods
 lua_register_object_metatable :: proc(L: ^lua.State) {
 	lua.L_newmetatable(L, "CubeObject")
