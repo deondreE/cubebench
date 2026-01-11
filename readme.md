@@ -2,7 +2,7 @@ Little blockbench clone because blockbench is slow :P
 
 ## TODO
 
-UV Editor - Done 
+UV Editor - Done
 
 User Interface:
 Resize panels
@@ -12,6 +12,7 @@ panels should be ignoreable
 - [ ] Animation Timeline
 - [ ] Color Picker
 - [ ] Scrollable panels
+- [ ] Script output console
 
 TOOLS:
 

@@ -237,22 +237,24 @@ mouse_callback :: proc "c" (window: glfw.WindowHandle, xpos, ypos: f64) {
 }
 
 scroll_callback :: proc "c" (window: glfw.WindowHandle, xoffset, yoffset: f64) {
-    context = runtime.default_context()
+	context = runtime.default_context()
 
-    mx, my := glfw.GetCursorPos(window)
-    local_x := f32(mx) - uv_editor.x
-    local_y := f32(my) - uv_editor.y
+	mx, my := glfw.GetCursorPos(window)
+	local_x := f32(mx) - uv_editor.x
+	local_y := f32(my) - uv_editor.y
 
-    // Check if mouse is over UV editor
-    if uv_editor.visible &&
-       local_x >= 0 && local_x <= uv_editor.width &&
-       local_y >= 0 && local_y <= uv_editor.height {
-        uv_editor_handle_scroll(&uv_editor, mx, my, yoffset)
-    } else {
-        // Regular camera zoom
-        camera_dist -= f32(yoffset) * 0.5
-        camera_dist = clamp(camera_dist, 1.0, 50.0)
-    }
+	// Check if mouse is over UV editor
+	if uv_editor.visible &&
+	   local_x >= 0 &&
+	   local_x <= uv_editor.width &&
+	   local_y >= 0 &&
+	   local_y <= uv_editor.height {
+		uv_editor_handle_scroll(&uv_editor, mx, my, yoffset)
+	} else {
+		// Regular camera zoom
+		camera_dist -= f32(yoffset) * 0.5
+		camera_dist = clamp(camera_dist, 1.0, 50.0)
+	}
 }
 
 key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods: i32) {
@@ -268,8 +270,7 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 		case glfw.KEY_Z:
 			if mods == glfw.MOD_CONTROL {
 				undo_perform(&scene)
-			}
-			else if mods == glfw.MOD_SHIFT {
+			} else if mods == glfw.MOD_SHIFT {
 				redo_perform(&scene)
 			}
 		case glfw.KEY_S:
@@ -282,9 +283,9 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 		case glfw.KEY_U:
 			uv_editor.visible = !uv_editor.visible
 			if uv_editor.visible && len(scene.selected_objects) > 0 {
-        obj := &scene.objects[scene.selected_objects[0]]
-        uv_editor_update_mesh(&uv_editor, obj)
-      }
+				obj := &scene.objects[scene.selected_objects[0]]
+				uv_editor_update_mesh(&uv_editor, obj)
+			}
 		case glfw.KEY_R:
 			tool_mode = .ROTATE
 		case glfw.KEY_E:
@@ -306,11 +307,11 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 		case glfw.KEY_TAB:
 			edit_mode = edit_mode == .OBJECT ? .FACE : .OBJECT
 		case glfw.KEY_DELETE:
-			record_delete_object(&scene, len(scene.objects)+1)
+			record_delete_object(&scene, len(scene.objects) + 1)
 			scene_delete_selected(&scene)
 		case glfw.KEY_D:
 			if mods == glfw.MOD_CONTROL {
-				record_add_object(&scene, len(scene.objects)+1)
+				record_add_object(&scene, len(scene.objects) + 1)
 				scene_duplicate_selected(&scene)
 			}
 		}
@@ -332,7 +333,7 @@ generate_cone :: proc(segments: i32 = 16, radius: f32 = 0.1, height: f32 = 0.4) 
 
 	tip := glsl.vec3({0, 0, height})
 
-	for i in 0..< segments {
+	for i in 0 ..< segments {
 		angle1 := f32(i) * 2.0 * math.PI / f32(segments)
 		angle2 := f32(i + 1) * 2.0 * math.PI / f32(segments)
 
@@ -363,23 +364,23 @@ generate_cube_tip :: proc(s: f32) -> []f32 {
 		append(v, x, y, z, nx, ny, nz)
 	}
 
-	add_v(&v, -s, -s,  s, 0, 0, 1); add_v(&v,  s, -s,  s, 0, 0, 1); add_v(&v,  s,  s,  s, 0, 0, 1)
-	add_v(&v,  s,  s,  s, 0, 0, 1); add_v(&v, -s,  s,  s, 0, 0, 1); add_v(&v, -s, -s,  s, 0, 0, 1)
+	add_v(&v, -s, -s, s, 0, 0, 1); add_v(&v, s, -s, s, 0, 0, 1); add_v(&v, s, s, s, 0, 0, 1)
+	add_v(&v, s, s, s, 0, 0, 1); add_v(&v, -s, s, s, 0, 0, 1); add_v(&v, -s, -s, s, 0, 0, 1)
 
-	add_v(&v,  s, -s, -s, 0, 0,-1); add_v(&v, -s, -s, -s, 0, 0,-1); add_v(&v, -s,  s, -s, 0, 0,-1)
-	add_v(&v, -s,  s, -s, 0, 0,-1); add_v(&v,  s,  s, -s, 0, 0,-1); add_v(&v,  s, -s, -s, 0, 0,-1)
+	add_v(&v, s, -s, -s, 0, 0, -1); add_v(&v, -s, -s, -s, 0, 0, -1); add_v(&v, -s, s, -s, 0, 0, -1)
+	add_v(&v, -s, s, -s, 0, 0, -1); add_v(&v, s, s, -s, 0, 0, -1); add_v(&v, s, -s, -s, 0, 0, -1)
 
-	add_v(&v, -s, -s, -s, -1, 0, 0); add_v(&v, -s, -s,  s, -1, 0, 0); add_v(&v, -s,  s,  s, -1, 0, 0)
-	add_v(&v, -s,  s,  s, -1, 0, 0); add_v(&v, -s,  s, -s, -1, 0, 0); add_v(&v, -s, -s, -s, -1, 0, 0)
+	add_v(&v, -s, -s, -s, -1, 0, 0); add_v(&v, -s, -s, s, -1, 0, 0); add_v(&v, -s, s, s, -1, 0, 0)
+	add_v(&v, -s, s, s, -1, 0, 0); add_v(&v, -s, s, -s, -1, 0, 0); add_v(&v, -s, -s, -s, -1, 0, 0)
 
-	add_v(&v,  s, -s,  s, 1, 0, 0); add_v(&v,  s, -s, -s, 1, 0, 0); add_v(&v,  s,  s, -s, 1, 0, 0)
-	add_v(&v,  s,  s, -s, 1, 0, 0); add_v(&v,  s,  s,  s, 1, 0, 0); add_v(&v,  s, -s,  s, 1, 0, 0)
+	add_v(&v, s, -s, s, 1, 0, 0); add_v(&v, s, -s, -s, 1, 0, 0); add_v(&v, s, s, -s, 1, 0, 0)
+	add_v(&v, s, s, -s, 1, 0, 0); add_v(&v, s, s, s, 1, 0, 0); add_v(&v, s, -s, s, 1, 0, 0)
 
-	add_v(&v, -s,  s,  s, 0, 1, 0); add_v(&v,  s,  s,  s, 0, 1, 0); add_v(&v,  s,  s, -s, 0, 1, 0)
-	add_v(&v,  s,  s, -s, 0, 1, 0); add_v(&v, -s,  s, -s, 0, 1, 0); add_v(&v, -s,  s,  s, 0, 1, 0)
+	add_v(&v, -s, s, s, 0, 1, 0); add_v(&v, s, s, s, 0, 1, 0); add_v(&v, s, s, -s, 0, 1, 0)
+	add_v(&v, s, s, -s, 0, 1, 0); add_v(&v, -s, s, -s, 0, 1, 0); add_v(&v, -s, s, s, 0, 1, 0)
 
-	add_v(&v, -s, -s, -s, 0, -1, 0); add_v(&v,  s, -s, -s, 0, -1, 0); add_v(&v,  s, -s,  s, 0, -1, 0)
-	add_v(&v,  s, -s,  s, 0, -1, 0); add_v(&v, -s, -s,  s, 0, -1, 0); add_v(&v, -s, -s, -s, 0, -1, 0)
+	add_v(&v, -s, -s, -s, 0, -1, 0); add_v(&v, s, -s, -s, 0, -1, 0); add_v(&v, s, -s, s, 0, -1, 0)
+	add_v(&v, s, -s, s, 0, -1, 0); add_v(&v, -s, -s, s, 0, -1, 0); add_v(&v, -s, -s, -s, 0, -1, 0)
 
 	return v[:]
 }
@@ -398,7 +399,7 @@ generate_gizmo_tips :: proc() -> []f32 {
 
 	circle := generate_circle(32, 1.2)
 	for i := 0; i < len(circle); i += 3 {
-		append(&tips, circle[i], circle[i+1], circle[1+2], 0, 0, 1)
+		append(&tips, circle[i], circle[i + 1], circle[1 + 2], 0, 0, 1)
 	}
 
 	return tips[:]
@@ -431,6 +432,9 @@ main :: proc() {
 
 	scene_init(&scene)
 	defer scene_cleanup(&scene)
+
+	lua_init()
+	defer lua_cleanup()
 
 	uv_editor_init(&uv_editor, 20, 100, 400, 400)
 	defer uv_editor_cleanup(&uv_editor)
@@ -662,9 +666,9 @@ main :: proc() {
 		render_ui(&ui, &scene, &tool_mode, &edit_mode)
 
 		if uv_editor.visible && len(scene.selected_objects) > 0 {
-      obj := &scene.objects[scene.selected_objects[0]]
-      uv_editor_render(&uv_editor, obj, &ui)
-    }
+			obj := &scene.objects[scene.selected_objects[0]]
+			uv_editor_render(&uv_editor, obj, &ui)
+		}
 
 		ui_render_end(&ui)
 
@@ -672,6 +676,7 @@ main :: proc() {
 
 		glfw.SwapBuffers(window)
 		glfw.PollEvents()
+		lua_update_live()
 	}
 }
 
@@ -733,19 +738,35 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 	// Current tool indicator
 	tool_display_name: string
 	switch tool_mode^ {
-	case .SELECT:    tool_display_name = "Select"
-	case .TRANSLATE: tool_display_name = "Move (G)"
-	case .SCALE:     tool_display_name = "Scale (S)"
-	case .ROTATE:    tool_display_name = "Rotate (R)"
-	case .EXTRUDE:   tool_display_name = "Extrude (E)"
-	case .PAINT:     tool_display_name = "Paint (P)"
+	case .SELECT:
+		tool_display_name = "Select"
+	case .TRANSLATE:
+		tool_display_name = "Move (G)"
+	case .SCALE:
+		tool_display_name = "Scale (S)"
+	case .ROTATE:
+		tool_display_name = "Rotate (R)"
+	case .EXTRUDE:
+		tool_display_name = "Extrude (E)"
+	case .PAINT:
+		tool_display_name = "Paint (P)"
 	}
 
 	// Tool header with colored background
-	tool_header_rect := UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 30}
+	tool_header_rect := UI_Rect {
+		ctx.cursor_x,
+		ctx.cursor_y,
+		sidebar_width - ctx.style.padding * 2,
+		30,
+	}
 	batch_rect(ctx, tool_header_rect, UI_Color{0.25, 0.5, 0.8, 0.3})
-	batch_text(ctx, fmt.tprintf("Tool: %s", tool_display_name),
-		ctx.cursor_x + 8, ctx.cursor_y + 8, ctx.style.text_color)
+	batch_text(
+		ctx,
+		fmt.tprintf("Tool: %s", tool_display_name),
+		ctx.cursor_x + 8,
+		ctx.cursor_y + 8,
+		ctx.style.text_color,
+	)
 	ctx.cursor_y += 35
 
 	ui_separator(ctx)
@@ -760,9 +781,20 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 		ui_spacing(ctx, 4)
 
 		// Position controls
-		section_rect := UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 20}
+		section_rect := UI_Rect {
+			ctx.cursor_x,
+			ctx.cursor_y,
+			sidebar_width - ctx.style.padding * 2,
+			20,
+		}
 		batch_rect(ctx, section_rect, UI_Color{0.18, 0.18, 0.22, 1.0})
-		batch_text(ctx, "Location", ctx.cursor_x + 8, ctx.cursor_y + 3, UI_Color{0.7, 0.7, 0.75, 1.0})
+		batch_text(
+			ctx,
+			"Location",
+			ctx.cursor_x + 8,
+			ctx.cursor_y + 3,
+			UI_Color{0.7, 0.7, 0.75, 1.0},
+		)
 		ctx.cursor_y += 25
 
 		ui_slider(ctx, &obj.position.x, -10, 10, "X")
@@ -772,9 +804,20 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 		ui_spacing(ctx, 8)
 
 		// Rotation controls
-		section_rect = UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 20}
+		section_rect = UI_Rect {
+			ctx.cursor_x,
+			ctx.cursor_y,
+			sidebar_width - ctx.style.padding * 2,
+			20,
+		}
 		batch_rect(ctx, section_rect, UI_Color{0.18, 0.18, 0.22, 1.0})
-		batch_text(ctx, "Rotation", ctx.cursor_x + 8, ctx.cursor_y + 3, UI_Color{0.7, 0.7, 0.75, 1.0})
+		batch_text(
+			ctx,
+			"Rotation",
+			ctx.cursor_x + 8,
+			ctx.cursor_y + 3,
+			UI_Color{0.7, 0.7, 0.75, 1.0},
+		)
 		ctx.cursor_y += 25
 
 		ui_slider(ctx, &obj.rotation.x, -180, 180, "X")
@@ -784,7 +827,12 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 		ui_spacing(ctx, 8)
 
 		// Scale controls
-		section_rect = UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 20}
+		section_rect = UI_Rect {
+			ctx.cursor_x,
+			ctx.cursor_y,
+			sidebar_width - ctx.style.padding * 2,
+			20,
+		}
 		batch_rect(ctx, section_rect, UI_Color{0.18, 0.18, 0.22, 1.0})
 		batch_text(ctx, "Scale", ctx.cursor_x + 8, ctx.cursor_y + 3, UI_Color{0.7, 0.7, 0.75, 1.0})
 		ctx.cursor_y += 25
@@ -796,7 +844,12 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 		ui_spacing(ctx, 8)
 
 		// Color section
-		section_rect = UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 20}
+		section_rect = UI_Rect {
+			ctx.cursor_x,
+			ctx.cursor_y,
+			sidebar_width - ctx.style.padding * 2,
+			20,
+		}
 		batch_rect(ctx, section_rect, UI_Color{0.18, 0.18, 0.22, 1.0})
 		batch_text(ctx, "Color", ctx.cursor_x + 8, ctx.cursor_y + 3, UI_Color{0.7, 0.7, 0.75, 1.0})
 		ctx.cursor_y += 25
@@ -920,7 +973,7 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 		"Objects: %d | Selected: %d | Mode: %s | LMB: Select | RMB: Orbit | Scroll: Zoom",
 		len(scene.objects),
 		len(scene.selected_objects),
-		edit_mode^ == .OBJECT ? "Object" : "Face"
+		edit_mode^ == .OBJECT ? "Object" : "Face",
 	)
 
 	batch_text(ctx, info_text, 10, status_y + 5, UI_Color{0.7, 0.7, 0.75, 1.0})

@@ -1,0 +1,17 @@
+SCENE MODULE
+Scene.addCube({pos, size, color}) -- Adds a cube
+Scene.clear() -- Deletes Everythiing
+Scene.count() -- Returns object count
+Scene.selected() -- Returns slected indices
+
+CUBE OBJECT
+obj:move(dx, dy, dz) - Relative Move
+obj:position(dx, dy, dz) - Set absolute pos
+obj:size(w, h, d) - Set dimensions
+obj:rotate(rx, ry, rz) - Rotate Cube
+obj:color(r, g, b) - Set RGB
+
+RANDOM MODULE
+Random.range(min, max) - Random Float
+Random.color() - Returns {r, g, b}
+Random.vector(min, max) - Returns {x,y,z}
