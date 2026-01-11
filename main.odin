@@ -182,13 +182,13 @@ draw_gizmo_axis :: proc(
 		tip_model := model * glsl.mat4Translate({0, 0, 1.0})
 		gl.UniformMatrix4fv(m_loc, 1, false, &tip_model[0, 0])
 		gl.BindVertexArray(vao_tip)
-		gl.DrawArrays(gl.TRIANGLES, 96, 256)
+		gl.DrawArrays(gl.TRIANGLES, 96, 200)
 
 	case .ROTATE:
 		gl.LineWidth(3.0)
 		gl.UniformMatrix4fv(m_loc, 1, false, &model[0, 0])
 		gl.BindVertexArray(vao_tip)
-		gl.DrawArrays(gl.LINE_LOOP, 20, 32)
+		gl.DrawArrays(gl.LINES, 100, 64)
 
 	case .SELECT, .EXTRUDE, .PAINT:
 	// No gizmo for these modes
@@ -357,6 +357,11 @@ generate_gizmo_tips :: proc() -> []f32 {
 	s: f32 = 0.05
 	cube_edges := generate_cube_tip(s)
 	for v in cube_edges do append(&tips, v)
+
+	circle := generate_circle(32, 1.2)
+	for i := 0; i < len(circle); i += 3 {
+		append(&tips, circle[i], circle[i+1], circle[1+2], 0, 0, 1)
+	}
 
 	return tips[:]
 }
@@ -629,55 +634,55 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 	// === TOP TOOLBAR (like Blender) ===
 	toolbar_height: f32 = 50
 	ui_panel_begin(ctx, 0, 0, SCR_WIDTH, toolbar_height, "")
-	
+
 	// Tool buttons with icons (horizontal layout)
-	ctx.cursor_x = 10	
+	ctx.cursor_x = 10
 	ctx.cursor_y = 10
-	
+
 	button_size: f32 = 32
-	
+
 	// Mode selector
 	if ui_icon_button(ctx, edit_mode^ == .OBJECT ? "cube" : "face", button_size) {
 		edit_mode^ = edit_mode^ == .OBJECT ? .FACE : .OBJECT
 	}
 	ctx.cursor_x += button_size + 5
 	ctx.cursor_y = 10
-	
+
 	// Separator
 	batch_rect(ctx, UI_Rect{ctx.cursor_x, 5, 2, toolbar_height - 10}, ctx.style.border_color)
 	ctx.cursor_x += 10
-	
+
 	// Transform tools
 	if ui_icon_button(ctx, "translate", button_size) do tool_mode^ = .TRANSLATE
 	ctx.cursor_x += button_size + 5
 	ctx.cursor_y = 10
-	
+
 	if ui_icon_button(ctx, "scale", button_size) do tool_mode^ = .SCALE
 	ctx.cursor_x += button_size + 5
 	ctx.cursor_y = 10
-	
+
 	if ui_icon_button(ctx, "rotate", button_size) do tool_mode^ = .ROTATE
 	ctx.cursor_x += button_size + 5
 	ctx.cursor_y = 10
-	
+
 	// Separator
 	batch_rect(ctx, UI_Rect{ctx.cursor_x, 5, 2, toolbar_height - 10}, ctx.style.border_color)
 	ctx.cursor_x += 10
-	
+
 	// Add object button (text button)
 	ctx.cursor_y = 13
 	if ui_button(ctx, "+ Add Cube", 100) {
 		scene_add_cube(scene, {0, 0, 0}, {1, 1, 1}, {1, 1, 1, 1})
 	}
-	
+
 	ui_panel_end(ctx)
 
 	// === LEFT SIDEBAR - TOOLS & PROPERTIES ===
 	sidebar_width: f32 = 280
 	sidebar_height := SCR_HEIGHT - toolbar_height
-	
+
 	ui_panel_begin(ctx, 0, toolbar_height, sidebar_width, sidebar_height, "")
-	
+
 	// Current tool indicator
 	tool_display_name: string
 	switch tool_mode^ {
@@ -688,110 +693,110 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 	case .EXTRUDE:   tool_display_name = "Extrude (E)"
 	case .PAINT:     tool_display_name = "Paint (P)"
 	}
-	
+
 	// Tool header with colored background
 	tool_header_rect := UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 30}
 	batch_rect(ctx, tool_header_rect, UI_Color{0.25, 0.5, 0.8, 0.3})
-	batch_text(ctx, fmt.tprintf("Tool: %s", tool_display_name), 
+	batch_text(ctx, fmt.tprintf("Tool: %s", tool_display_name),
 		ctx.cursor_x + 8, ctx.cursor_y + 8, ctx.style.text_color)
 	ctx.cursor_y += 35
-	
+
 	ui_separator(ctx)
-	
+
 	// Transform section (collapsible style)
 	if len(scene.selected_objects) > 0 {
 		obj_idx := scene.selected_objects[0]
 		obj := &scene.objects[obj_idx]
-		
+
 		// Object name header
 		ui_label(ctx, fmt.tprintf("► Cube.%03d", obj_idx))
 		ui_spacing(ctx, 4)
-		
+
 		// Position controls
 		section_rect := UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 20}
 		batch_rect(ctx, section_rect, UI_Color{0.18, 0.18, 0.22, 1.0})
 		batch_text(ctx, "Location", ctx.cursor_x + 8, ctx.cursor_y + 3, UI_Color{0.7, 0.7, 0.75, 1.0})
 		ctx.cursor_y += 25
-		
+
 		ui_slider(ctx, &obj.position.x, -10, 10, "X")
 		ui_slider(ctx, &obj.position.y, -10, 10, "Y")
 		ui_slider(ctx, &obj.position.z, -10, 10, "Z")
-		
+
 		ui_spacing(ctx, 8)
-		
+
 		// Rotation controls
 		section_rect = UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 20}
 		batch_rect(ctx, section_rect, UI_Color{0.18, 0.18, 0.22, 1.0})
 		batch_text(ctx, "Rotation", ctx.cursor_x + 8, ctx.cursor_y + 3, UI_Color{0.7, 0.7, 0.75, 1.0})
 		ctx.cursor_y += 25
-		
+
 		ui_slider(ctx, &obj.rotation.x, -180, 180, "X")
 		ui_slider(ctx, &obj.rotation.y, -180, 180, "Y")
 		ui_slider(ctx, &obj.rotation.z, -180, 180, "Z")
-		
+
 		ui_spacing(ctx, 8)
-		
+
 		// Scale controls
 		section_rect = UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 20}
 		batch_rect(ctx, section_rect, UI_Color{0.18, 0.18, 0.22, 1.0})
 		batch_text(ctx, "Scale", ctx.cursor_x + 8, ctx.cursor_y + 3, UI_Color{0.7, 0.7, 0.75, 1.0})
 		ctx.cursor_y += 25
-		
+
 		ui_slider(ctx, &obj.scale.x, 0.1, 5, "X")
 		ui_slider(ctx, &obj.scale.y, 0.1, 5, "Y")
 		ui_slider(ctx, &obj.scale.z, 0.1, 5, "Z")
-		
+
 		ui_spacing(ctx, 8)
-		
+
 		// Color section
 		section_rect = UI_Rect{ctx.cursor_x, ctx.cursor_y, sidebar_width - ctx.style.padding * 2, 20}
 		batch_rect(ctx, section_rect, UI_Color{0.18, 0.18, 0.22, 1.0})
 		batch_text(ctx, "Color", ctx.cursor_x + 8, ctx.cursor_y + 3, UI_Color{0.7, 0.7, 0.75, 1.0})
 		ctx.cursor_y += 25
-		
+
 		// Color preview square
 		color_preview_rect := UI_Rect{ctx.cursor_x, ctx.cursor_y, 40, 40}
 		batch_rect(ctx, color_preview_rect, UI_Color{obj.color.r, obj.color.g, obj.color.b, 1.0})
 		batch_rect_outline(ctx, color_preview_rect, ctx.style.border_color, 2)
-		
+
 		ctx.cursor_x += 50
 		old_y := ctx.cursor_y
-		
+
 		// Color sliders (compact)
 		ctx.cursor_y = old_y
 		ui_slider(ctx, &obj.color.r, 0, 1, "R")
 		ui_slider(ctx, &obj.color.g, 0, 1, "G")
 		ui_slider(ctx, &obj.color.b, 0, 1, "B")
-		
+
 		ctx.cursor_x = 8
-		
+
 		ui_spacing(ctx, 12)
 		ui_separator(ctx)
-		
+
 		// Action buttons
 		if ui_button(ctx, "Duplicate (Ctrl+D)", 0) {
 			scene_duplicate_selected(scene)
 		}
-		
+
 		if ui_button(ctx, "Delete (Del)", 0) {
 			scene_delete_selected(scene)
 		}
-		
+
 	} else {
 		ui_spacing(ctx, 20)
 		ui_label(ctx, "No object selected")
 		ui_spacing(ctx, 10)
 		ui_label(ctx, "Select an object to edit")
 	}
-	
+
 	ui_panel_end(ctx)
 
 	// === RIGHT SIDEBAR - OUTLINER ===
 	outliner_width: f32 = 250
 	outliner_x := SCR_WIDTH - outliner_width
-	
+
 	ui_panel_begin(ctx, outliner_x, toolbar_height, outliner_width, sidebar_height, "Outliner")
-	
+
 	if len(scene.objects) == 0 {
 		ui_spacing(ctx, 20)
 		ui_label(ctx, "Scene is empty")
@@ -800,7 +805,7 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 	} else {
 		ui_label(ctx, fmt.tprintf("Scene (%d objects)", len(scene.objects)))
 		ui_separator(ctx)
-		
+
 		for _, i in scene.objects {
 			is_selected := false
 			for sel_idx in scene.selected_objects {
@@ -809,21 +814,21 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 					break
 				}
 			}
-			
+
 			// Custom button with icon-like appearance
 			id := gen_id(ctx)
 			w := outliner_width - ctx.style.padding * 2
 			h: f32 = 28
-			
+
 			rect := UI_Rect{ctx.cursor_x, ctx.cursor_y, w, h}
-			
+
 			is_hot := point_in_rect(ctx.mouse_x, ctx.mouse_y, rect)
 			if is_hot do ctx.hot_id = id
-			
+
 			if is_hot && ctx.mouse_pressed {
 				scene_select_object(scene, i)
 			}
-			
+
 			// Background color based on state
 			bg_color := ctx.style.fg_color
 			if is_selected {
@@ -831,38 +836,38 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 			} else if is_hot {
 				bg_color = ctx.style.hover_color
 			}
-			
+
 			batch_rect(ctx, rect, bg_color)
 			if is_selected {
 				batch_rect_outline(ctx, rect, UI_Color{0.4, 0.6, 1.0, 1.0}, 2)
 			}
-			
+
 			// Draw cube icon (simple square)
 			icon_size: f32 = 16
 			icon_rect := UI_Rect{ctx.cursor_x + 6, ctx.cursor_y + 6, icon_size, icon_size}
 			batch_rect(ctx, icon_rect, UI_Color{0.6, 0.6, 0.65, 1.0})
 			batch_rect_outline(ctx, icon_rect, ctx.style.border_color)
-			
+
 			// Object name
 			label := fmt.tprintf("Cube.%03d", i)
 			batch_text(ctx, label, ctx.cursor_x + 28, ctx.cursor_y + 7, ctx.style.text_color)
-			
+
 			ctx.cursor_y += h + 2
 		}
 	}
-	
+
 	ui_panel_end(ctx)
 
 	// === BOTTOM STATUS BAR ===
 	status_height: f32 = 24
 	status_y := SCR_HEIGHT - status_height
-	
+
 	ui_panel_begin(ctx, 0, status_y, SCR_WIDTH, status_height, "")
-	
+
 	// Dark background for status bar
 	status_bg := UI_Rect{0, status_y, SCR_WIDTH, status_height}
 	batch_rect(ctx, status_bg, UI_Color{0.12, 0.12, 0.15, 1.0})
-	
+
 	// Status text (compact info)
 	info_text := fmt.tprintf(
 		"Objects: %d | Selected: %d | Mode: %s | LMB: Select | RMB: Orbit | Scroll: Zoom",
@@ -870,9 +875,9 @@ render_ui :: proc(ctx: ^UI_Context, scene: ^Scene, tool_mode: ^Tool_Mode, edit_m
 		len(scene.selected_objects),
 		edit_mode^ == .OBJECT ? "Object" : "Face"
 	)
-	
+
 	batch_text(ctx, info_text, 10, status_y + 5, UI_Color{0.7, 0.7, 0.75, 1.0})
-	
+
 	ui_panel_end(ctx)
 
 	ui_render_end(ctx)

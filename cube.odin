@@ -1,6 +1,7 @@
 package main
 
 import "core:math/linalg/glsl"
+import "core:math"
 
 // cube := [?]f32{
 // // Positions          // Colors
@@ -68,4 +69,18 @@ test_ray_cube :: proc(ray_origin, ray_dir: glsl.vec3, cube_min, cube_max: glsl.v
 
 	if (tmin > tzmax) || (tzmin > tmax) do return false
 	return true
+}
+
+test_ray_circle :: proc(origin, dir, center: glsl.vec3, normal: glsl.vec3, radius: f32) -> bool {
+	denom := glsl.dot(normal, dir)
+	if math.abs(denom) < 0.0001 do return false
+
+	t := glsl.dot(center - origin, normal) / denom
+	if t < 0 do return false
+
+	hit_point := origin + dir * t
+	dist := glsl.length(hit_point - center)
+
+	// Threshold for clicking the "line" of the circle
+	return math.abs(dist - radius) < 0.15 
 }
