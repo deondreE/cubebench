@@ -14,6 +14,8 @@ SCR_HEIGHT :: 720
 camera_yaw: f32 = -45.0
 camera_pitch: f32 = 30.0
 camera_dist: f32 = 10.0
+is_camera_panning: bool = false
+pan_offset: glsl.vec3 = {0,0,0}
 last_mouse_x: f64 = SCR_WIDTH / 2.0
 last_mouse_y: f64 = SCR_HEIGHT / 2.0
 first_mouse: bool = true
@@ -219,6 +221,21 @@ mouse_callback :: proc "c" (window: glfw.WindowHandle, xpos, ypos: f64) {
 	camera_yaw += xoffset * sensitivity
 	camera_pitch += yoffset * sensitivity
 	camera_pitch = clamp(camera_pitch, -89.0, 89.0)
+
+	if glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS {
+		front := glsl.normalize(glsl.vec3{
+			glsl.cos(glsl.radians(camera_yaw)) * glsl.cos(glsl.radians(camera_pitch)),
+			glsl.sin(glsl.radians(camera_pitch)),
+			glsl.sin(glsl.radians(camera_yaw)) * glsl.cos(glsl.radians(camera_pitch)),
+		})
+		right := glsl.normalize(glsl.cross(front, glsl.vec3{0, 1, 0}))
+		up := glsl.normalize(glsl.cross(right, front))
+
+		pan_speed := camera_dist * 0.001
+		pan_offset -= right * xoffset * pan_speed
+		pan_offset -=  up * yoffset * pan_speed
+		return
+	}
 
 	if uv_editor.visible && len(scene.selected_objects) > 0 {
 		obj := &scene.objects[scene.selected_objects[0]]
@@ -503,7 +520,9 @@ main :: proc() {
 			glsl.sin(glsl.radians(camera_yaw)) *
 			glsl.cos(glsl.radians(camera_pitch)),
 		}
-		view := glsl.mat4LookAt(cam_pos, {0, 0, 0}, {0, 1, 0})
+		target := pan_offset
+		actual_cam_pos := cam_pos + pan_offset
+		view := glsl.mat4LookAt(actual_cam_pos, target, {0, 1, 0})
 		proj := glsl.mat4Perspective(glsl.radians(f32(45.0)), SCR_WIDTH / SCR_HEIGHT, 0.1, 100.0)
 
 		origin, dir := calculate_ray(nx, ny, proj, view)
