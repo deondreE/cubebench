@@ -16,7 +16,7 @@ camera_yaw: f32 = -45.0
 camera_pitch: f32 = 30.0
 camera_dist: f32 = 10.0
 is_camera_panning: bool = false
-pan_offset: glsl.vec3 = {0,0,0}
+pan_offset: glsl.vec3 = {0, 0, 0}
 last_mouse_x: f64 = SCR_WIDTH / 2.0
 last_mouse_y: f64 = SCR_HEIGHT / 2.0
 first_mouse: bool = true
@@ -24,6 +24,8 @@ first_mouse: bool = true
 // Scene
 scene: Scene
 ui: UI_Context
+anim_state: Animation_State
+timeline: Timeline_UI
 tool_mode: Tool_Mode = .SELECT
 edit_mode: Edit_Mode = .OBJECT
 
@@ -224,17 +226,19 @@ mouse_callback :: proc "c" (window: glfw.WindowHandle, xpos, ypos: f64) {
 	camera_pitch = clamp(camera_pitch, -89.0, 89.0)
 
 	if glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS {
-		front := glsl.normalize(glsl.vec3{
-			glsl.cos(glsl.radians(camera_yaw)) * glsl.cos(glsl.radians(camera_pitch)),
-			glsl.sin(glsl.radians(camera_pitch)),
-			glsl.sin(glsl.radians(camera_yaw)) * glsl.cos(glsl.radians(camera_pitch)),
-		})
+		front := glsl.normalize(
+			glsl.vec3 {
+				glsl.cos(glsl.radians(camera_yaw)) * glsl.cos(glsl.radians(camera_pitch)),
+				glsl.sin(glsl.radians(camera_pitch)),
+				glsl.sin(glsl.radians(camera_yaw)) * glsl.cos(glsl.radians(camera_pitch)),
+			},
+		)
 		right := glsl.normalize(glsl.cross(front, glsl.vec3{0, 1, 0}))
 		up := glsl.normalize(glsl.cross(right, front))
 
 		pan_speed := camera_dist * 0.001
 		pan_offset -= right * xoffset * pan_speed
-		pan_offset -=  up * yoffset * pan_speed
+		pan_offset -= up * yoffset * pan_speed
 		return
 	}
 
@@ -298,6 +302,16 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 			} else {
 				tool_mode = .SCALE
 			}
+		case glfw.KEY_SPACE:
+			if anim_state.animations[anim_state.current_anim].playing {
+				anim_pause(&anim_state)
+			} else {
+				anim_play(&anim_state)
+			}
+		case glfw.KEY_K:
+			for obj_id in scene.selected_objects {
+				anim_record_transform(&anim_state, &scene, obj_id)
+			}
 		case glfw.KEY_U:
 			uv_editor.visible = !uv_editor.visible
 			if uv_editor.visible && len(scene.selected_objects) > 0 {
@@ -311,9 +325,13 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 		case glfw.KEY_P:
 			tool_mode = .PAINT
 		case glfw.KEY_T:
-			if len(scene.selected_objects) > 0 {
-				obj := &scene.objects[scene.selected_objects[0]]
-				obj.use_texture = !obj.use_texture
+			if mods == glfw.MOD_CONTROL {
+				timeline.visible = !timeline.visible
+			} else {
+				if len(scene.selected_objects) > 0 {
+					obj := &scene.objects[scene.selected_objects[0]]
+					obj.use_texture = !obj.use_texture
+				}
 			}
 		case glfw.KEY_L:
 			if len(scene.selected_objects) > 0 {
@@ -445,24 +463,24 @@ main :: proc() {
 	glfw.SetScrollCallback(window, scroll_callback)
 	glfw.SetKeyCallback(window, key_callback)
 
-	 icon_width, icon_height, icon_channels: i32
-	 icon_pixels := image.load("icons/Icon.png", &icon_width, &icon_height, &icon_channels, 4)
-   if icon_pixels != nil {
-	 icon_image := glfw.Image {
-		 width  = icon_width,
-		 height = icon_height,
-		 pixels = icon_pixels,
-	 }
-		
-	icon_arr := [?]glfw.Image{icon_image}
-	 glfw.SetWindowIcon(window, icon_arr[:])
-	
-	 // Clean up the memory once it's uploaded to the window system
-	 image.image_free(icon_pixels)
- 	} else {
-	  fmt.println("Failed to load icon: icons/Icon.png")
-  }
-	
+	icon_width, icon_height, icon_channels: i32
+	icon_pixels := image.load("icons/Icon.png", &icon_width, &icon_height, &icon_channels, 4)
+	if icon_pixels != nil {
+		icon_image := glfw.Image {
+			width  = icon_width,
+			height = icon_height,
+			pixels = icon_pixels,
+		}
+
+		icon_arr := [?]glfw.Image{icon_image}
+		glfw.SetWindowIcon(window, icon_arr[:])
+
+		// Clean up the memory once it's uploaded to the window system
+		image.image_free(icon_pixels)
+	} else {
+		fmt.println("Failed to load icon: icons/Icon.png")
+	}
+
 	ui_init(&ui, SCR_WIDTH, SCR_HEIGHT)
 	defer ui_cleanup(&ui)
 
@@ -477,6 +495,14 @@ main :: proc() {
 
 	undo_init(100)
 	defer undo_cleanup()
+
+	anim_state_init(&anim_state)
+	timeline_init(&timeline)
+	defer anim_state_cleanup(&anim_state)
+
+	// TODO: Remove this later
+	anim_create(&anim_state, "Idle", 5.0)
+	anim_state.current_anim = 0
 
 	// Add a default cube
 	scene_add_cube(&scene, {0, 0, 0}, {1, 1, 1}, {1, 1, 1, 1})
@@ -702,6 +728,11 @@ main :: proc() {
 		gl.Clear(gl.DEPTH_BUFFER_BIT)
 		ui_render_begin(&ui, SCR_WIDTH, SCR_HEIGHT)
 		render_ui(&ui, &scene, &tool_mode, &edit_mode)
+		last_time := f32(glfw.GetTime())
+		if timeline.visible {
+			timeline_render(&timeline, &anim_state, &scene, &ui)
+			anim_update(&anim_state, &scene, f32(glfw.GetTime() - f64(last_time)))
+		}
 
 		if uv_editor.visible && len(scene.selected_objects) > 0 {
 			obj := &scene.objects[scene.selected_objects[0]]
