@@ -251,6 +251,7 @@ ui_load_icons_from_directory :: proc(ctx: ^UI_Context, dir: string) {
 		"camera.png",
 		"grid.png",
 		"settings.png",
+		"Icon.png",
 	}
 
 	for icon_file in icon_files {

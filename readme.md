@@ -2,8 +2,6 @@ Little blockbench clone because blockbench is slow :P
 
 ## TODO
 
-CAMERA PANNING :{
-
 User Interface:
 Resize panels
 panels should be ignoreable
@@ -17,12 +15,9 @@ TOOLS:
 
 - Top / Bottom / Left / Right Snap Face
 - Pivot snap points
+- Pan Tool - {Hand}
 
 - Extrude
-
-Add Support for Other shapes:
-
-- [ ] Quad
 
 Material Changes
 

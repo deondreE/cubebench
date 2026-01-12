@@ -6,6 +6,7 @@ import "core:math"
 import "core:math/linalg/glsl"
 import gl "vendor:OpenGL"
 import "vendor:glfw"
+import "vendor:stb/image"
 
 SCR_WIDTH :: 1280
 SCR_HEIGHT :: 720
@@ -444,6 +445,24 @@ main :: proc() {
 	glfw.SetScrollCallback(window, scroll_callback)
 	glfw.SetKeyCallback(window, key_callback)
 
+	 icon_width, icon_height, icon_channels: i32
+	 icon_pixels := image.load("icons/Icon.png", &icon_width, &icon_height, &icon_channels, 4)
+   if icon_pixels != nil {
+	 icon_image := glfw.Image {
+		 width  = icon_width,
+		 height = icon_height,
+		 pixels = icon_pixels,
+	 }
+		
+	icon_arr := [?]glfw.Image{icon_image}
+	 glfw.SetWindowIcon(window, icon_arr[:])
+	
+	 // Clean up the memory once it's uploaded to the window system
+	 image.image_free(icon_pixels)
+ 	} else {
+	  fmt.println("Failed to load icon: icons/Icon.png")
+  }
+	
 	ui_init(&ui, SCR_WIDTH, SCR_HEIGHT)
 	defer ui_cleanup(&ui)
 
