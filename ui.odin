@@ -133,7 +133,7 @@ load_font :: proc(atlas: ^Font_Atlas, font_size: f32) -> bool {
 		"C:/Windows/Fonts/arial.ttf",
 		"C:/Windows/Fonts/segoeui.ttf",
 		"/System/Library/Fonts/Helvetica.ttc",
-		"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+		"/usr/share/fonts/TTF/DejaVuSans.ttf",
 	}
 
 	font_data: []u8

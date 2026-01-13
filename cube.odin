@@ -64,6 +64,7 @@ test_ray_cube :: proc(ray_origin, ray_dir: glsl.vec3, cube_min, cube_max: glsl.v
 	if tymax > tmax do tmax = tymax
 
 	tzmin := (cube_min.z - ray_origin.z) / ray_dir.z
+	
 	tzmax := (cube_max.z - ray_origin.z) / ray_dir.z
 	if tzmin > tzmax do tzmin, tzmax = tzmax, tzmin
 
