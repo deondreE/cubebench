@@ -11,6 +11,21 @@ import "vendor:stb/image"
 SCR_WIDTH :: 1280
 SCR_HEIGHT :: 720
 
+Window_State :: struct {
+	width: i32,
+	height: i32,
+	aspect_ratio: f32,
+}
+
+window_state_init :: proc(w, h: i32) {
+	window_state.width = w
+	window_state.height = h
+	window_state.aspect_ratio = f32(w) / f32(h)
+}
+
+
+window_state: Window_State
+
 // Camera
 camera_yaw: f32 = -45.0
 camera_pitch: f32 = 30.0
@@ -203,19 +218,32 @@ draw_gizmo_axis :: proc(
 }
 
 framebuffer_size_callback :: proc "c" (window: glfw.WindowHandle, width, height: i32) {
+	context = runtime.default_context()
 	gl.Viewport(0, 0, width, height)
+
+	window_state.width = width
+	window_state.height = height
+	window_state.aspect_ratio = f32(width) / f32(height)
+
+	ui_resize(&ui, width, height)
 }
 
 mouse_callback :: proc "c" (window: glfw.WindowHandle, xpos, ypos: f64) {
 	context = runtime.default_context()
+
+	nx := f32((2.0 * xpos) / f64(window_state.width) - 1.0)
+	ny := f32(1.0 - (2.0 * ypos) / f64(window_state.height))
+	
 	if glfw.GetMouseButton(window, glfw.MOUSE_BUTTON_RIGHT) != glfw.PRESS {
 		first_mouse = true
 		return
 	}
+	
 	if first_mouse {
 		last_mouse_x, last_mouse_y = xpos, ypos
 		first_mouse = false
 	}
+	
 	xoffset := f32(xpos - last_mouse_x)
 	yoffset := f32(last_mouse_y - ypos)
 	last_mouse_x, last_mouse_y = xpos, ypos
@@ -273,7 +301,6 @@ scroll_callback :: proc "c" (window: glfw.WindowHandle, xoffset, yoffset: f64) {
 	   local_y <= uv_editor.height {
 		uv_editor_handle_scroll(&uv_editor, mx, my, yoffset)
 	} else {
-		// Regular camera zoom
 		camera_dist -= f32(yoffset) * 0.5
 		camera_dist = clamp(camera_dist, 1.0, 50.0)
 	}
@@ -553,7 +580,7 @@ main :: proc() {
 		ui_begin_frame(&ui, window)
 
 		mx, my := glfw.GetCursorPos(window)
-		nx, ny := f32((2.0 * mx) / SCR_WIDTH - 1.0), f32(1.0 - (2.0 * my) / SCR_HEIGHT)
+		nx, ny := f32((2.0 * mx) / f64(window_state.width) - 1.0), f32(1.0 - (2.0 * my) / f64(window_state.height))
 
 		// Camera
 		cam_pos := glsl.vec3 {

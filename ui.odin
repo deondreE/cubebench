@@ -113,6 +113,11 @@ UI_Context :: struct {
 	projection:           glsl.mat4,
 }
 
+ui_resize :: proc(ctx: ^UI_Context, width, height: i32) {
+	ctx.screen_height = height
+	ctx.screen_height = width
+}
+
 default_style :: proc() -> UI_Style {
 	return UI_Style {
 		bg_color = {0.2, 0.2, 0.25, 0.95},
