@@ -23,7 +23,6 @@ window_state_init :: proc(w, h: i32) {
 	window_state.aspect_ratio = f32(w) / f32(h)
 }
 
-
 window_state: Window_State
 
 // Camera
@@ -59,6 +58,13 @@ Tool_Mode :: enum {
 	PAINT,
 }
 
+Extrude_State :: struct {
+	active: bool,
+	original_face: i32,
+	extrude_obj: int,
+	extrude_distance: f32,
+}
+
 Paint_State :: struct {
 	active:         bool,
 	brush_color:    glsl.vec4,
@@ -88,6 +94,7 @@ paint_state: Paint_State = {
 }
 
 uv_editor: UV_Editor
+extrude_state: Extrude_State
 
 paint_on_face :: proc(scene: ^Scene, obj_idx: int, face_idx: i32, uv: glsl.vec2) {
 	if obj_idx < 0 || obj_idx >= len(scene.objects) do return
