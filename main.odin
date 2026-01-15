@@ -319,7 +319,9 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 		switch key {
 		case glfw.KEY_G:
 			tool_mode = .TRANSLATE
-		case glfw.KEY_O:
+		case glfw.KEY_X:
+			console.visible = !console.visible
+		 case glfw.KEY_O:
 			if mods == glfw.MOD_CONTROL {
 				load_scene_from_file(&scene, "./test_project.json")
 			}
@@ -523,6 +525,12 @@ main :: proc() {
 
 	lua_init()
 	defer lua_cleanup()
+
+	console_init(&console, 20, 500, 600, 300)
+	defer console_cleanup(&console)
+
+	console_log(&console, "3D Editor initialized", .INFO)
+	console_log(&console, "Press ~ to toggle console", .INFO)
 
 	uv_editor_init(&uv_editor, 20, 100, 400, 400)
 	defer uv_editor_cleanup(&uv_editor)
@@ -771,6 +779,10 @@ main :: proc() {
 		if uv_editor.visible && len(scene.selected_objects) > 0 {
 			obj := &scene.objects[scene.selected_objects[0]]
 			uv_editor_render(&uv_editor, obj, &ui)
+		}
+
+		if console.visible {
+			console_render(&console, &ui)
 		}
 
 		ui_render_end(&ui)
