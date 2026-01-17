@@ -91,6 +91,27 @@ scene_add_cube :: proc(scene: ^Scene, pos, scale: glsl.vec3, color: glsl.vec4) -
 	return len(scene.objects) - 1
 }
 
+scene_delete_cube :: proc(scene: ^Scene, index: int) {
+	if index < 0 || index >= len(scene.objects) do return
+
+	obj := scene.objects[index]
+	gl.DeleteVertexArrays(1, &obj.vbo)
+	gl.DeleteBuffers(1, &obj.vbo)
+
+	ordered_remove(&scene.objects, index)
+
+	for i := len(scene.selected_objects) - 1; i >= 0; i -= 1 {
+		sel := scene.selected_objects[i]
+
+		if sel == index {
+			ordered_remove(&scene.selected_objects, i)
+		} else if sel > index {
+			scene.selected_objects[i] -= 1
+		}
+	}
+}
+
+
 scene_add_quad :: proc (scene: ^Scene, pos, scale: glsl.vec3, color: glsl.vec4) -> int {
 	obj := Scene_Object{
 		position = pos,

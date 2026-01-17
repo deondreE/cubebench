@@ -130,7 +130,6 @@ lua_register_method :: proc(
 	lua.pop(L, 1)
 }
 
-// TODO: scene_delete_object(&scene, obj_idx)
 // Object metatable for object methods
 lua_register_object_metatable :: proc(L: ^lua.State) {
 	lua.L_newmetatable(L, "CubeObject")
@@ -305,7 +304,7 @@ lua_scene_clear :: proc "c" (L: ^lua.State) -> i32 {
 	context = runtime.default_context()
 
 	for i := len(scene.objects) - 1; i >= 0; i -= 1 {
-		scene_delete_selected(&scene)
+		scene_delete_cube(&scene, i)
 	}
 	return 0
 }
