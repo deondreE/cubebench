@@ -4,6 +4,8 @@ import "core:fmt"
 import "core:strings"
 import "core:time"
 
+// TODO: Fix rendering.
+
 Console_Message :: struct {
   text: string,
   timestamp: time.Time,
